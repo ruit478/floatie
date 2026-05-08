@@ -11,7 +11,7 @@ import java.util.Map;
 @RestController
 public class FloatieApplication {
 
-	public static void main(String[] args) {
+	static void main(String[] args) {
 		SpringApplication.run(FloatieApplication.class, args);
 	}
 
