@@ -1,4 +1,4 @@
-package com.floatie;
+package com.future.floatie;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

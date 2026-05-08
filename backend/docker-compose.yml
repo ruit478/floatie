@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: floatie-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-floatie}
+      POSTGRES_USER: ${POSTGRES_USER:-floatie}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-floatie123}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-floatie} -d ${POSTGRES_DB:-floatie}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - floatie-network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: floatie-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-default}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-floatie}
+      DB_USER: ${POSTGRES_USER:-floatie}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-floatie123}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      UPLOADS_DIR: ${UPLOADS_DIR:-/app/uploads}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:4200}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pet_sprites:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    networks:
+      - floatie-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  pet_sprites:
+    driver: local
+
+networks:
+  floatie-network:
+    driver: bridge
