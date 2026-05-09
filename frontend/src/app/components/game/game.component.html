@@ -1,0 +1,15 @@
+<div class="game-container">
+  <div class="game-header">
+    <div class="user-info">
+      <span class="pixel-text">{{ username }}</span>
+      <button (click)="logout()" class="logout-btn">LOGOUT</button>
+    </div>
+  </div>
+  <div class="game-content">
+    <div class="pixel-card">
+      <h2>Welcome, {{ username }}!</h2>
+      <div class="pet-sprite">🐱</div>
+      <p>Your virtual pet is ready!</p>
+    </div>
+  </div>
+</div>

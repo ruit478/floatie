@@ -32,7 +32,6 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    // REGISTER - uses AuthRequest
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody AuthRequest request) {
         // Check if user exists
@@ -42,13 +41,6 @@ public class AuthController {
                     .body(new AuthResponse(null, null, "Username is already taken"));
         }
 
-        if (userRepository.existsByEmail(request.email())) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(new AuthResponse(null, null, "Email is already registered"));
-        }
-
-        // Create new user
         User user = new User(
                 request.username(),
                 request.email(),

@@ -1,0 +1,19 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+  padding: 1rem;
+  position: relative;
+}
+
+.demo-hint {
+  font-size: 0.7rem;
+  color: #6a6a7e;
+  font-family: 'VT323', monospace;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #0f0f17;
+  border: 1px solid #2a2a3e;
+}

@@ -1,0 +1,10 @@
+.error-message {
+  font-family: 'VT323', monospace;
+  font-size: 0.85rem;
+  color: #e94560;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 1px;
+}

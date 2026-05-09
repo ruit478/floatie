@@ -1,0 +1,118 @@
+<!-- frontend/src/app/components/register/register.component.html -->
+<div class="register-container">
+  <div class="pixel-card">
+    <div class="pixel-header">
+      <div class="pixel-icon">🐱</div>
+      <h1 class="pixel-title">CREATE PET</h1>
+      <div class="pixel-divider"></div>
+      <p class="pixel-subtitle">START YOUR ADVENTURE</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+      <!-- Username Field -->
+      <div class="form-group">
+        <label for="username" class="pixel-label">
+          <span class="label-icon">👤</span>
+          USERNAME
+        </label>
+        <input
+          type="text"
+          id="username"
+          formControlName="username"
+          class="pixel-input"
+          [class.error]="registerForm.get('username')?.invalid && registerForm.get('username')?.touched"
+          placeholder="CHOOSE USERNAME"
+          autocomplete="username"
+        />
+        <field-error [control]="registerForm.get('username')!"/>
+      </div>
+
+      <!-- Email Field (Optional) -->
+      <div class="form-group">
+        <label for="email" class="pixel-label">
+          <span class="label-icon">📧</span>
+          EMAIL (OPTIONAL)
+        </label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          class="pixel-input"
+          [class.error]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+          placeholder="your@email.com"
+          autocomplete="email"
+        />
+        <field-error [control]="registerForm.get('email')!"/>
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password" class="pixel-label">
+          <span class="label-icon">🔒</span>
+          PASSWORD
+        </label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          class="pixel-input"
+          [class.error]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+          placeholder="CREATE PASSWORD"
+          autocomplete="new-password"
+        />
+        <field-error [control]="registerForm.get('password')!" />
+      </div>
+
+      <!-- Confirm Password Field -->
+      <div class="form-group">
+        <label for="confirmPassword" class="pixel-label">
+          <span class="label-icon">✓</span>
+          CONFIRM PASSWORD
+        </label>
+        <input
+          type="password"
+          id="confirmPassword"
+          formControlName="confirmPassword"
+          class="pixel-input"
+          [class.error]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched"
+          placeholder="CONFIRM PASSWORD"
+          autocomplete="new-password"
+        />
+        <field-error
+          [control]="registerForm.get('confirmPassword')!"
+          [messages]="{ passwordMismatch: '⚠ Passwords do not match' }"
+        />
+      </div>
+
+      <!-- REMOVED: Entire password strength section -->
+
+      <!-- Global Error Message -->
+      @if (errorMessage()) {
+        <div class="global-error">
+          <span class="error-icon">❗</span>
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="pixel-button pixel-button-primary"
+        [disabled]="registerForm.invalid || isLoading()"
+      >
+        @if (!isLoading()) {
+          <span>🐱 CREATE ACCOUNT</span>
+        }
+        @if (isLoading()) {
+          <span class="loading-spinner">◐ CREATING...</span>
+        }
+      </button>
+
+      <!-- Footer Links -->
+      <div class="pixel-footer">
+        <p>ALREADY HAVE AN ACCOUNT? <a routerLink="/login" class="pixel-link">LOGIN</a></p>
+        <p class="info-text">🎉 YOUR PET WILL BE GENERATED AUTOMATICALLY!</p>
+      </div>
+    </form>
+  </div>
+</div>

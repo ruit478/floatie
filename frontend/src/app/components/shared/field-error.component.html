@@ -1,0 +1,7 @@
+@if (control().touched && control().invalid) {
+  <div class="error-message">
+    @for (key of errorKeys(); track key) {
+      <span>{{ message(key) }}</span>
+    }
+  </div>
+}

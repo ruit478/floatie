@@ -1,0 +1,79 @@
+<!-- frontend/src/app/components/login/login.component.html -->
+<div class="login-container">
+  <div class="pixel-card">
+    <!-- Header -->
+    <div class="pixel-header">
+      <div class="pixel-icon">🐱</div>
+      <h1 class="pixel-title">FLOATIE</h1>
+      <div class="pixel-divider"></div>
+      <p class="pixel-subtitle">LOGIN TO YOUR PET</p>
+    </div>
+
+    <!-- Login Form -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <!-- Username Field -->
+      <div class="form-group">
+        <label for="username" class="pixel-label">
+          <span class="label-icon">👤</span>
+          USERNAME
+        </label>
+        <input
+          type="text"
+          id="username"
+          formControlName="username"
+          class="pixel-input"
+          [class.error]="loginForm.get('username')?.invalid && loginForm.get('username')?.touched"
+          placeholder="ENTER USERNAME"
+          autocomplete="username"
+        />
+        <field-error [control]="loginForm.get('username')!"/>
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password" class="pixel-label">
+          <span class="label-icon">🔒</span>
+          PASSWORD
+        </label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          class="pixel-input"
+          [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+          placeholder="ENTER PASSWORD"
+          autocomplete="current-password"
+        />
+        <field-error [control]="loginForm.get('password')!"/>
+      </div>
+
+      <!-- Global Error Message -->
+      @if (errorMessage()) {
+        <div class="global-error">
+          <span class="error-icon">❗</span>
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="pixel-button pixel-button-primary"
+        [disabled]="loginForm.invalid || isLoading()"
+      >
+        @if (!isLoading()) {
+          <span>▶ LOGIN</span>
+        }
+        @if (isLoading()) {
+          <span class="loading-spinner">◐ LOADING...</span>
+        }
+      </button>
+
+      <!-- Footer Links -->
+      <div class="pixel-footer">
+        <p>NEW HERE? <a routerLink="/register" class="pixel-link">CREATE ACCOUNT</a></p>
+        <p class="demo-hint">DEMO: username: "test" / password: "test123"</p>
+      </div>
+    </form>
+  </div>
+</div>

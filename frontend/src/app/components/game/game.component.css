@@ -1,0 +1,55 @@
+.game-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 1rem;
+}
+.game-header {
+  background: #0f0f1a;
+  border: 2px solid #e94560;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: flex-end;
+}
+.user-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+.pixel-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.7rem;
+  color: #f5a623;
+}
+.logout-btn {
+  background: #e94560;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.6rem;
+  color: white;
+  cursor: pointer;
+}
+.game-content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+.pixel-card {
+  background: #0f0f1a;
+  border: 4px solid #e94560;
+  padding: 2rem;
+  text-align: center;
+}
+h2 {
+  font-family: 'Press Start 2P', monospace;
+  color: #f5a623;
+}
+.pet-sprite {
+  font-size: 100px;
+  margin: 2rem;
+}
+p {
+  font-family: 'VT323', monospace;
+  font-size: 1.2rem;
+  color: #a0a0b0;
+}

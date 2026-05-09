@@ -1,0 +1,29 @@
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+  padding: 1rem;
+  position: relative;
+  overflow-y: auto;
+}
+
+/* register's card is slightly wider and scrollable */
+.pixel-card {
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.pixel-card::-webkit-scrollbar { width: 8px; background: #1a1a2e; }
+.pixel-card::-webkit-scrollbar-thumb { background: #e94560; border: 1px solid #2a2a3e; }
+
+.info-text {
+  font-size: 0.7rem;
+  color: #6a6a7e;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #0f0f17;
+  border: 1px solid #2a2a3e;
+}
