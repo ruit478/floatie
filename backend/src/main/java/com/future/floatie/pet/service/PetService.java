@@ -1,5 +1,6 @@
 package com.future.floatie.pet.service;
 
+import com.future.floatie.pet.dto.PetInfoResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -18,9 +19,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -31,6 +30,17 @@ public class PetService {
     private static final String[] PET_CLASSES = {"MAMMALS", "BIRDS", "REPTILES", "AMPHIBIANS", "FISH", "INVERTEBRATES"};
     private static final String[] SUBCLASSES = {"cat", "dog", "fox", "rabbit", "axolotl", "frog", "penguin", "parrot"};
     private static final String[] COLORS = {"#FF6B9D", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"};
+    private static final Map<String, String[]> SPECIES_NAMES = Map.of(
+            "cat", new String[]{"Whiskers", "Luna", "Simba", "Mittens", "Shadow", "Cleo", "Felix", "Oliver"},
+            "dog", new String[]{"Buddy", "Max", "Bella", "Charlie", "Rocky", "Daisy", "Cooper", "Lola"},
+            "fox", new String[]{"Fennel", "Rusty", "Vulpes", "Blaze", "Ember", "Zorro", "Foxy", "Cinder"},
+            "rabbit", new String[]{"Fluffy", "Thumper", "Hoppy", "Cotton", "Snowball", "Bugs", "Bunny", "Clover"},
+            "axolotl", new String[]{"Axel", "Loti", "Salamander", "Mudkip", "Aqua", "Axo", "Lottie", "Mochi"},
+            "frog", new String[]{"Kermit", "Croak", "Hopper", "Lily", "Toad", "Frogger", "Sprout", "Puddles"},
+            "penguin", new String[]{"Pip", "Skipper", "Pebble", "Ice", "Flake", "Waddle", "Flipper", "Snow"},
+            "parrot", new String[]{"Rio", "Sky", "Rainbow", "Kiwi", "Coco", "Phoenix", "Tiki", "Zazu"}
+    );
+
 
     @Autowired
     private PetRepository petRepository;
@@ -60,17 +70,18 @@ public class PetService {
             pet.setUser(user);
             pet.setClassType(petClass);
             pet.setSubclass(subclass);
+            pet.setName(getRandomNameForSubclass(subclass));
             pet.setColorHex(colorHex);
             pet.setExpression(expression);
             pet.setLifeStage(LifeStage.EGG);
 
             // Initialize stats
-            pet.setHunger(50);
-            pet.setHappiness(70);
-            pet.setEnergy(80);
-            pet.setHealth(100);
-            pet.setHygiene(80);
-            pet.setWeight(50);
+            pet.setHunger(30 + random.nextInt(60));     // 30-89
+            pet.setHappiness(40 + random.nextInt(60));   // 40-99
+            pet.setEnergy(50 + random.nextInt(50));      // 50-99
+            pet.setHealth(70 + random.nextInt(31));      // 70-100
+            pet.setHygiene(40 + random.nextInt(60));     // 40-99
+            pet.setWeight(30 + random.nextInt(70));      // 30-99
             pet.setXp(0);
             pet.setLevel(1);
 
@@ -96,14 +107,6 @@ public class PetService {
         }
     }
 
-    public Optional<Resource> getPetSprite(UUID petId) {
-        return petRepository.findById(petId)
-                .flatMap(pet -> {
-                    log.debug("Loading sprite for petId: {}", petId);
-                    return getSpriteResource(pet.getId().toString() + ".png");
-                });
-    }
-
     private String generateAndSaveSprite(Pet pet) throws IOException {
         log.debug("Generating sprite for petId: {}", pet.getId());
 
@@ -121,11 +124,6 @@ public class PetService {
         // Return URL
         String spriteUrl = "/api/v1/pet/sprite/" + pet.getId();
         return spriteUrl;
-    }
-
-    public Optional<Resource> getPetSpriteByFilename(String filename) {
-        log.debug("Loading sprite by filename: {}", filename);
-        return getSpriteResource(filename);
     }
 
     private Optional<Resource> getSpriteResource(String filename) {
@@ -183,6 +181,11 @@ public class PetService {
     private String getRandomPetClass() {
         return PET_CLASSES[random.nextInt(PET_CLASSES.length)];
     }
+    private String getRandomNameForSubclass(String subclass) {
+        String[] names = SPECIES_NAMES.getOrDefault(subclass,
+                new String[]{"Buddy", "Lucky", "Sparky", "Rosie", "Max", "Bella", "Charlie", "Daisy"});
+        return names[random.nextInt(names.length)];
+    }
 
     private String getRandomSubclass() {
         return SUBCLASSES[random.nextInt(SUBCLASSES.length)];
@@ -195,5 +198,19 @@ public class PetService {
     private PetExpression getRandomExpression() {
         PetExpression[] expressions = PetExpression.values();
         return expressions[random.nextInt(expressions.length)];
+    }
+
+    public Optional<PetInfoResponse> getPetInfo(String username) {
+        return petRepository.findByUser_Username(username).map(pet -> {
+            String base64 = getSpriteResource(pet.getId() + ".png")
+                    .map(resource -> {
+                        try {
+                            return Base64.getEncoder().encodeToString(resource.getContentAsByteArray());
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    }).orElse(null);
+            return PetInfoResponse.from(pet, base64);
+        });
     }
 }

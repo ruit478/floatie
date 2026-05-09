@@ -1,6 +1,7 @@
 package com.future.floatie.pet.controller;
 
 import com.future.floatie.entity.Pet;
+import com.future.floatie.pet.dto.PetInfoResponse;
 import com.future.floatie.pet.service.PetService;
 import com.future.floatie.pet.service.PixelArtService;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import javax.imageio.ImageIO;
@@ -30,16 +32,24 @@ public class SpriteController {
     @Autowired
     private PixelArtService pixelArtService;
 
-    @GetMapping("/{petId}")
-    public ResponseEntity<Resource> getSprite(@PathVariable UUID petId) {
-        // PetService handles all the logic:
-        // - Finds the pet
-        // - Retrieves the sprite from storage
-        // - Returns as Resource
-        return petService.getPetSprite(petId)
-                .map(resource -> ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE)
-                        .body(resource))
+//    @GetMapping("/{petId}")
+//    public ResponseEntity<Resource> getSprite(@PathVariable UUID petId) {
+//        // PetService handles all the logic:
+//        // - Finds the pet
+//        // - Retrieves the sprite from storage
+//        // - Returns as Resource
+//        return petService.getPetSprite(petId)
+//                .map(resource -> ResponseEntity.ok()
+//                        .header(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE)
+//                        .body(resource))
+//                .orElse(ResponseEntity.notFound().build());
+//    }
+
+    @GetMapping("/info")
+    public ResponseEntity<PetInfoResponse> getPetInfo(Authentication authentication) {
+
+        return petService.getPetInfo(authentication.getName())
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 

@@ -1,15 +1,73 @@
 <div class="game-container">
-  <div class="game-header">
-    <div class="user-info">
-      <span class="pixel-text">{{ username }}</span>
-      <button (click)="logout()" class="logout-btn">LOGOUT</button>
-    </div>
-  </div>
-  <div class="game-content">
-    <div class="pixel-card">
-      <h2>Welcome, {{ username }}!</h2>
-      <div class="pet-sprite">🐱</div>
-      <p>Your virtual pet is ready!</p>
-    </div>
-  </div>
+
+  <header class="game-header">
+    <span class="pixel-text">{{ username() }}</span>
+    <button (click)="logout()" class="logout-btn">LOGOUT</button>
+  </header>
+
+  <main class="game-content">
+
+    @if (isLoading()) {
+      <div class="pet-card loading-card">
+        <p>Loading your pet…</p>
+      </div>
+    }
+
+    @else if (error()) {
+      <div class="pet-card error-card">
+        <p>{{ error() }}</p>
+      </div>
+    }
+
+    @else if (pet(); as pet) {
+      <div class="pet-card">
+
+        <div class="pet-identity">
+          <img
+            [src]="spriteUrl()"
+            [alt]="pet.name"
+            class="pet-sprite"
+          />
+          <div class="pet-meta">
+            <h2 class="pet-name">{{ pet.name}}</h2>
+            <span class="pet-species">{{ pet.subclass }} · {{ pet.lifeStage }}</span>
+            <span class="pet-level">Lv. {{ pet.level }} · {{ pet.xp }} XP</span>
+            @if (pet.isSick) {
+              <span class="status-badge sick">🤒 Sick</span>
+            }
+            @if (pet.isAsleep) {
+              <span class="status-badge asleep">💤 Asleep</span>
+            }
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          @for (stat of coreStats(); track stat.label) {
+            <div class="stat-row">
+              <span class="stat-label">{{ stat.icon }} {{ stat.label }}</span>
+              <div class="stat-bar-track">
+                <div
+                  class="stat-bar-fill"
+                  [style.width.%]="stat.value"
+                  [class.critical]="stat.value < 25"
+                  [class.warning]="stat.value >= 25 && stat.value < 50"
+                ></div>
+              </div>
+              <span class="stat-value">{{ stat.value }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="pet-footer">
+          <span>Bond Level: {{ pet.bondLevel }}</span>
+          <span>Age: {{ pet.ageDays }}d</span>
+          @if (pet.personality) {
+            <span>{{ pet.personality }}</span>
+          }
+        </div>
+
+      </div>
+    }
+
+  </main>
 </div>
