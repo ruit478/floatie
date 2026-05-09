@@ -4,6 +4,7 @@ import com.future.floatie.auth.request.AuthRequest;
 import com.future.floatie.auth.response.AuthResponse;
 import com.future.floatie.config.JwtUtil;
 import com.future.floatie.entity.User;
+import com.future.floatie.pet.service.PetService;
 import com.future.floatie.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/auth")
@@ -34,6 +37,9 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private PetService petService;  // Separate service for pet creation
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody AuthRequest request) {
         log.info("Registration attempt for username='{}'", request.username());
@@ -44,13 +50,18 @@ public class AuthController {
                     .body(new AuthResponse(null, null, "Username is already taken"));
         }
 
-        User user = new User(
-                request.username(),
-                request.email(),
-                passwordEncoder.encode(request.password())  // Hash password
-        );
+        User user = new User();
+        user.setUsername(request.username());
+        user.setEmail(request.email());
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
 
         userRepository.save(user);
+
+        petService.createPetForUser(user)
+                .ifPresentOrElse(
+                        pet -> log.info("Pet created: {}", pet.getId()),
+                        () -> { throw new RuntimeException("Failed to create pet"); }
+                );
 
         // Generate token
         UserDetails userDetails = org.springframework.security.core.userdetails.User
