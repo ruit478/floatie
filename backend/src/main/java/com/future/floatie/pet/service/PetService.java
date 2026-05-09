@@ -89,8 +89,7 @@ public class PetService {
             log.info("Pet entity created with ID: {} for user: {}", savedPet.getId(), user.getUsername());
 
             // Generate and save sprite
-            String spriteUrl = generateAndSaveSprite(savedPet);
-            savedPet.setSpriteUrl(spriteUrl);
+            generateAndSaveSprite(savedPet);
 
             Pet finalPet = petRepository.save(savedPet);
             log.info("Pet creation completed successfully for user: {} -> petId: {}, species: {}",
@@ -107,7 +106,7 @@ public class PetService {
         }
     }
 
-    private String generateAndSaveSprite(Pet pet) throws IOException {
+    private void generateAndSaveSprite(Pet pet) throws IOException {
         log.debug("Generating sprite for petId: {}", pet.getId());
 
         // Generate sprite image
@@ -120,10 +119,6 @@ public class PetService {
         javax.imageio.ImageIO.write(sprite, "PNG", filePath.toFile());
 
         log.debug("Sprite saved to disk: {}", filePath);
-
-        // Return URL
-        String spriteUrl = "/api/v1/pet/sprite/" + pet.getId();
-        return spriteUrl;
     }
 
     private Optional<Resource> getSpriteResource(String filename) {
@@ -160,8 +155,7 @@ public class PetService {
                     petId, oldStage, oldStage + 1, evolutionPath);
 
             // Regenerate sprite
-            String newSpriteUrl = generateAndSaveSprite(pet);
-            pet.setSpriteUrl(newSpriteUrl);
+            generateAndSaveSprite(pet);
 
             Pet evolvedPet = petRepository.save(pet);
             log.info("Pet {} evolution completed successfully", petId);

@@ -41,8 +41,6 @@ public class Pet {
     @Column(nullable = false, length = 20)
     private PetExpression expression;
 
-    @Column(name = "sprite_url", nullable = true, length = 512)
-    private String spriteUrl;
 
     // Core Stats (0-100)
     @Column(nullable = false)
@@ -70,8 +68,6 @@ public class Pet {
     @Column(name = "age_days", nullable = false)
     private Integer ageDays = 0;
 
-    @Column(name = "hatched_at")
-    private LocalDateTime hatchedAt;
 
     // Progression
     @Column(nullable = false)
@@ -80,13 +76,6 @@ public class Pet {
     @Column(nullable = false)
     private Integer level = 1;
 
-    // Personality
-    @Column(length = 20)
-    private String personality;
-
-    @Column(name = "personality_locked", nullable = false)
-    private Boolean personalityLocked = false;
-
     // Evolution
     @Enumerated(EnumType.STRING)
     @Column(name = "evolution_path", length = 20)
@@ -94,13 +83,6 @@ public class Pet {
 
     @Column(name = "evolution_stage", nullable = false)
     private Integer evolutionStage = 1;
-
-    // State Flags
-    @Column(name = "is_sick", nullable = false)
-    private Boolean isSick = false;
-
-    @Column(name = "sick_days", nullable = false)
-    private Integer sickDays = 0;
 
     @Column(name = "is_asleep", nullable = false)
     private Boolean isAsleep = false;

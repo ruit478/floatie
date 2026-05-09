@@ -27,23 +27,10 @@ import java.util.UUID;
 public class SpriteController {
 
     @Autowired
-    private PetService petService;  // Only dependency - coordinates everything
+    private PetService petService;
 
     @Autowired
     private PixelArtService pixelArtService;
-
-//    @GetMapping("/{petId}")
-//    public ResponseEntity<Resource> getSprite(@PathVariable UUID petId) {
-//        // PetService handles all the logic:
-//        // - Finds the pet
-//        // - Retrieves the sprite from storage
-//        // - Returns as Resource
-//        return petService.getPetSprite(petId)
-//                .map(resource -> ResponseEntity.ok()
-//                        .header(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE)
-//                        .body(resource))
-//                .orElse(ResponseEntity.notFound().build());
-//    }
 
     @GetMapping("/info")
     public ResponseEntity<PetInfoResponse> getPetInfo(Authentication authentication) {

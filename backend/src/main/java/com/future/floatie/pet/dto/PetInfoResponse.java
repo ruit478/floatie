@@ -33,10 +33,8 @@ public record PetInfoResponse(
         EvolutionPath evolutionPath,
 
         // State
-        boolean isSick,
         boolean isAsleep,
-        int bondLevel,
-        String personality
+        int bondLevel
 ) {
     public static PetInfoResponse from(Pet pet, String spriteBase64) {
         return new PetInfoResponse(
@@ -59,10 +57,8 @@ public record PetInfoResponse(
                 pet.getAgeDays(),
                 pet.getEvolutionStage(),
                 pet.getEvolutionPath(),
-                pet.getIsSick(),
                 pet.getIsAsleep(),
-                pet.getBondLevel(),
-                pet.getPersonality()
+                pet.getBondLevel()
 
         );
     }
