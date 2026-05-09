@@ -2,95 +2,118 @@
 <div class="register-container">
   <div class="pixel-card">
     <div class="pixel-header">
-      <div class="pixel-icon">🐱</div>
+      <div class="pixel-icon" aria-hidden="true">🐱</div>
       <h1 class="pixel-title">CREATE PET</h1>
-      <div class="pixel-divider"></div>
+      <div class="pixel-divider" aria-hidden="true"></div>
       <p class="pixel-subtitle">START YOUR ADVENTURE</p>
     </div>
 
-    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form" novalidate>
       <!-- Username Field -->
       <div class="form-group">
         <label for="username" class="pixel-label">
-          <span class="label-icon">👤</span>
+          <span class="label-icon" aria-hidden="true">👤</span>
           USERNAME
         </label>
         <input
           type="text"
           id="username"
+          name="username"
           formControlName="username"
           class="pixel-input"
-          [class.error]="registerForm.get('username')?.invalid && registerForm.get('username')?.touched"
+          [class.error]="isFieldInvalid('username')"
+          [attr.aria-invalid]="isFieldInvalid('username')"
+          [attr.aria-describedby]="getFieldErrorId('username')"
           placeholder="CHOOSE USERNAME"
           autocomplete="username"
+          required
         />
-        <field-error [control]="registerForm.get('username')!"/>
+        <field-error
+          [control]="registerForm.get('username')!"
+          [id]="getFieldErrorId('username')"
+        />
       </div>
 
       <!-- Email Field (Optional) -->
       <div class="form-group">
         <label for="email" class="pixel-label">
-          <span class="label-icon">📧</span>
-          EMAIL (OPTIONAL)
+          <span class="label-icon" aria-hidden="true">📧</span>
+          EMAIL <span class="optional-badge">OPTIONAL</span>
         </label>
         <input
           type="email"
           id="email"
+          name="email"
           formControlName="email"
           class="pixel-input"
-          [class.error]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+          [class.error]="isFieldInvalid('email')"
+          [attr.aria-invalid]="isFieldInvalid('email')"
+          [attr.aria-describedby]="getFieldErrorId('email')"
           placeholder="your@email.com"
           autocomplete="email"
         />
-        <field-error [control]="registerForm.get('email')!"/>
+        <field-error
+          [control]="registerForm.get('email')!"
+          [id]="getFieldErrorId('email')"
+        />
       </div>
 
       <!-- Password Field -->
       <div class="form-group">
         <label for="password" class="pixel-label">
-          <span class="label-icon">🔒</span>
+          <span class="label-icon" aria-hidden="true">🔒</span>
           PASSWORD
         </label>
         <input
           type="password"
           id="password"
+          name="password"
           formControlName="password"
           class="pixel-input"
-          [class.error]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+          [class.error]="isFieldInvalid('password')"
+          [attr.aria-invalid]="isFieldInvalid('password')"
+          [attr.aria-describedby]="getFieldErrorId('password')"
           placeholder="CREATE PASSWORD"
           autocomplete="new-password"
+          required
         />
-        <field-error [control]="registerForm.get('password')!" />
+        <field-error
+          [control]="registerForm.get('password')!"
+          [id]="getFieldErrorId('password')"
+        />
       </div>
 
       <!-- Confirm Password Field -->
       <div class="form-group">
         <label for="confirmPassword" class="pixel-label">
-          <span class="label-icon">✓</span>
+          <span class="label-icon" aria-hidden="true">✓</span>
           CONFIRM PASSWORD
         </label>
         <input
           type="password"
           id="confirmPassword"
+          name="confirmPassword"
           formControlName="confirmPassword"
           class="pixel-input"
-          [class.error]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched"
+          [class.error]="isFieldInvalid('confirmPassword')"
+          [attr.aria-invalid]="isFieldInvalid('confirmPassword')"
+          [attr.aria-describedby]="getFieldErrorId('confirmPassword')"
           placeholder="CONFIRM PASSWORD"
           autocomplete="new-password"
+          required
         />
         <field-error
           [control]="registerForm.get('confirmPassword')!"
+          [id]="getFieldErrorId('confirmPassword')"
           [messages]="{ passwordMismatch: '⚠ Passwords do not match' }"
         />
       </div>
 
-      <!-- REMOVED: Entire password strength section -->
-
       <!-- Global Error Message -->
-      @if (errorMessage()) {
-        <div class="global-error">
-          <span class="error-icon">❗</span>
-          {{ errorMessage() }}
+      @if (registrationState().error) {
+        <div class="global-error" role="alert" aria-live="polite">
+          <span class="error-icon" aria-hidden="true">❗</span>
+          {{ registrationState().error }}
         </div>
       }
 
@@ -98,20 +121,26 @@
       <button
         type="submit"
         class="pixel-button pixel-button-primary"
-        [disabled]="registerForm.invalid || isLoading()"
+        [disabled]="registerForm.invalid || registrationState().loading"
+        [attr.aria-busy]="registrationState().loading"
       >
-        @if (!isLoading()) {
+        @if (!registrationState().loading) {
           <span>🐱 CREATE ACCOUNT</span>
-        }
-        @if (isLoading()) {
-          <span class="loading-spinner">◐ CREATING...</span>
+        } @else {
+          <span class="loading-spinner">
+            <span class="sr-only">Processing registration request</span>
+            ◐ CREATING...
+          </span>
         }
       </button>
 
       <!-- Footer Links -->
       <div class="pixel-footer">
-        <p>ALREADY HAVE AN ACCOUNT? <a routerLink="/login" class="pixel-link">LOGIN</a></p>
-        <p class="info-text">🎉 YOUR PET WILL BE GENERATED AUTOMATICALLY!</p>
+        <p>ALREADY HAVE AN ACCOUNT? <a routerLink="/login" class="pixel-link" tabindex="0">LOGIN</a></p>
+        <p class="info-text" aria-label="Pet generation information">
+          <span aria-hidden="true">🎉</span>
+          YOUR PET WILL BE GENERATED AUTOMATICALLY!
+        </p>
       </div>
     </form>
   </div>

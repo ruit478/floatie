@@ -4,6 +4,7 @@ package com.future.floatie.config;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -16,12 +17,13 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Component
+@Slf4j
 public class JwtUtil {
 
-    @Value("${jwt.secret:defaultSecretKeyForFloatieGame2025!PleaseChangeInProduction}")
+    @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration:86400000}") // 24 hours in milliseconds
+    @Value("${jwt.expiration}") // 24 hours in milliseconds
     private long expiration;
 
     private SecretKey getSigningKey() {
@@ -56,6 +58,7 @@ public class JwtUtil {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        log.debug("Generating JWT for username='{}'", userDetails.getUsername());
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -71,6 +74,12 @@ public class JwtUtil {
 
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        if (!isTokenExpired(token)) {
+            return (username.equals(userDetails.getUsername()));
+        }
+        else{
+            log.debug("JWT expired for username='{}'", userDetails.getUsername());
+            return false;
+        }
     }
 }

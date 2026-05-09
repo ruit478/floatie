@@ -3,55 +3,69 @@
   <div class="pixel-card">
     <!-- Header -->
     <div class="pixel-header">
-      <div class="pixel-icon">🐱</div>
+      <div class="pixel-icon" aria-hidden="true">🐱</div>
       <h1 class="pixel-title">FLOATIE</h1>
-      <div class="pixel-divider"></div>
+      <div class="pixel-divider" aria-hidden="true"></div>
       <p class="pixel-subtitle">LOGIN TO YOUR PET</p>
     </div>
 
     <!-- Login Form -->
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form" novalidate>
       <!-- Username Field -->
       <div class="form-group">
         <label for="username" class="pixel-label">
-          <span class="label-icon">👤</span>
+          <span class="label-icon" aria-hidden="true">👤</span>
           USERNAME
         </label>
         <input
           type="text"
           id="username"
+          name="username"
           formControlName="username"
           class="pixel-input"
-          [class.error]="loginForm.get('username')?.invalid && loginForm.get('username')?.touched"
+          [class.error]="isFieldInvalid('username')"
+          [attr.aria-invalid]="isFieldInvalid('username')"
+          [attr.aria-describedby]="getFieldErrorId('username')"
           placeholder="ENTER USERNAME"
           autocomplete="username"
+          required
         />
-        <field-error [control]="loginForm.get('username')!"/>
+        <field-error
+          [control]="loginForm.get('username')!"
+          [id]="getFieldErrorId('username')"
+        />
       </div>
 
       <!-- Password Field -->
       <div class="form-group">
         <label for="password" class="pixel-label">
-          <span class="label-icon">🔒</span>
+          <span class="label-icon" aria-hidden="true">🔒</span>
           PASSWORD
         </label>
         <input
           type="password"
           id="password"
+          name="password"
           formControlName="password"
           class="pixel-input"
-          [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+          [class.error]="isFieldInvalid('password')"
+          [attr.aria-invalid]="isFieldInvalid('password')"
+          [attr.aria-describedby]="getFieldErrorId('password')"
           placeholder="ENTER PASSWORD"
           autocomplete="current-password"
+          required
         />
-        <field-error [control]="loginForm.get('password')!"/>
+        <field-error
+          [control]="loginForm.get('password')!"
+          [id]="getFieldErrorId('password')"
+        />
       </div>
 
       <!-- Global Error Message -->
-      @if (errorMessage()) {
-        <div class="global-error">
-          <span class="error-icon">❗</span>
-          {{ errorMessage() }}
+      @if (loginState().error) {
+        <div class="global-error" role="alert" aria-live="polite">
+          <span class="error-icon" aria-hidden="true">❗</span>
+          {{ loginState().error }}
         </div>
       }
 
@@ -59,19 +73,22 @@
       <button
         type="submit"
         class="pixel-button pixel-button-primary"
-        [disabled]="loginForm.invalid || isLoading()"
+        [disabled]="loginForm.invalid || loginState().loading"
+        [attr.aria-busy]="loginState().loading"
       >
-        @if (!isLoading()) {
+        @if (!loginState().loading) {
           <span>▶ LOGIN</span>
-        }
-        @if (isLoading()) {
-          <span class="loading-spinner">◐ LOADING...</span>
+        } @else {
+          <span class="loading-spinner">
+            <span class="sr-only">Processing login request</span>
+            ◐ LOADING...
+          </span>
         }
       </button>
 
       <!-- Footer Links -->
       <div class="pixel-footer">
-        <p>NEW HERE? <a routerLink="/register" class="pixel-link">CREATE ACCOUNT</a></p>
+        <p>NEW HERE? <a routerLink="/register" class="pixel-link" tabindex="0">CREATE ACCOUNT</a></p>
         <p class="demo-hint">DEMO: username: "test" / password: "test123"</p>
       </div>
     </form>

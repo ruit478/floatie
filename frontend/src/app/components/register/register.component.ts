@@ -1,11 +1,14 @@
 // frontend/src/app/components/register/register.component.ts
-import { Component, signal } from '@angular/core';
+import { Component, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import {AuthService} from '../../services/auth.service';
-import {RegisterRequest} from '../../models/auth.models';
-import {FieldErrorComponent} from '../shared/field-error.component';
+import { AuthService } from '../../services/auth.service';
+import { RegisterRequest } from '../../models/auth.models';
+import { FieldErrorComponent } from '../shared/field-error.component';
+import { Subject, of } from 'rxjs';
+import { switchMap, catchError } from 'rxjs/operators';
+import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-register',
@@ -20,15 +23,34 @@ import {FieldErrorComponent} from '../shared/field-error.component';
   styleUrl: './register.component.css'
 })
 export class RegisterComponent {
-  registerForm: FormGroup;
-  isLoading = signal(false);
-  errorMessage = signal('');
+  private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
-  constructor(
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private router: Router
-  ) {
+  registerForm: FormGroup;
+  private submitSubject = new Subject<RegisterRequest>();
+
+  // Conversion of the registration observable to a signal
+  registrationState = toSignal(
+    this.submitSubject.pipe(
+      switchMap((payload) =>
+        this.authService.register(payload).pipe(
+          switchMap(() => {
+            this.router.navigate(['/game']);
+            return of({ loading: false, error: null } as const);
+          }),
+          catchError((error) => {
+            return of({ loading: false, error: error.message || 'Registration failed. Please try again.' } as const);
+          })
+        )
+      ),
+      takeUntilDestroyed(this.destroyRef)
+    ),
+    { initialValue: { loading: false, error: null } as const }
+  );
+
+  constructor() {
     this.registerForm = this.fb.group({
       username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
       email: ['', [Validators.email]],
@@ -60,10 +82,6 @@ export class RegisterComponent {
       return;
     }
 
-    this.isLoading.set(true);
-    this.errorMessage.set('');
-
-
     const { confirmPassword, ...rest } = this.registerForm.value;
     const payload: RegisterRequest = {
       username: rest.username,
@@ -71,15 +89,15 @@ export class RegisterComponent {
       ...(rest.email ? { email: rest.email } : {}),
     };
 
-    this.authService.register(payload).subscribe({
-      next: () => {
-        this.isLoading.set(false);
-        this.router.navigate(['/game']);
-      },
-      error: (error) => {
-        this.errorMessage.set(error.message || 'Registration failed. Please try again.');
-        this.isLoading.set(false);
-      }
-    });
+    this.submitSubject.next(payload);
+  }
+
+  isFieldInvalid(fieldName: string): boolean {
+    const control = this.registerForm.get(fieldName);
+    return control ? (control.invalid && (control.touched || control.dirty)) : false;
+  }
+
+  getFieldErrorId(fieldName: string): string {
+    return `${fieldName}-error`;
   }
 }

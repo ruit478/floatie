@@ -6,6 +6,7 @@ import com.future.floatie.config.JwtUtil;
 import com.future.floatie.entity.User;
 import com.future.floatie.repository.UserRepository;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
+@Slf4j
 public class AuthController {
 
     @Autowired
@@ -34,8 +36,9 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody AuthRequest request) {
-        // Check if user exists
+        log.info("Registration attempt for username='{}'", request.username());
         if (userRepository.existsByUsername(request.username())) {
+            log.warn("Registration failed - username already taken: '{}'", request.username());
             return ResponseEntity
                     .badRequest()
                     .body(new AuthResponse(null, null, "Username is already taken"));
@@ -58,7 +61,7 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(userDetails);
 
-        // Return AuthResponse with token
+        log.info("User registered successfully: username='{}', id='{}'", user.getUsername(), user.getId());
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new AuthResponse(token, user.getUsername(), "Registration successful"));
