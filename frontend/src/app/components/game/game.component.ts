@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
-import {catchError, of, map, startWith, Observable} from 'rxjs';
+import { catchError, of, map, startWith, Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 interface PetInfo {
   id: string;
@@ -57,7 +58,7 @@ export class GameComponent {
   // requireSync is safe here because startWith guarantees
   // a synchronous emission — the signal is never undefined.
   readonly petState = toSignal<PetState>(
-    this.http.get<PetInfo>('http://localhost:8080/api/v1/pet/sprite/info').pipe(
+    this.http.get<PetInfo>(`${environment.apiUrl}/api/v1/pet/sprite/info`).pipe(
       map((pet): PetState => ({ status: 'loaded', pet })),
       catchError((): Observable<PetState> => of({ status: 'error', message: 'Could not load pet.' })),
       startWith<PetState>({ status: 'loading' })

@@ -41,7 +41,6 @@ public class Pet {
     @Column(nullable = false, length = 20)
     private PetExpression expression;
 
-
     // Core Stats (0-100)
     @Column(nullable = false)
     private Integer hunger = 50;
