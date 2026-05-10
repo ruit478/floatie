@@ -27,7 +27,6 @@ public class PetService {
 
     private static final Random random = new Random();
 
-    private static final String[] PET_CLASSES = {"MAMMALS", "BIRDS", "REPTILES", "AMPHIBIANS", "FISH", "INVERTEBRATES"};
     private static final String[] SUBCLASSES = {"cat", "dog", "fox", "rabbit", "axolotl", "frog", "penguin", "parrot"};
     private static final String[] COLORS = {"#FF6B9D", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"};
     private static final Map<String, String[]> SPECIES_NAMES = Map.of(
@@ -57,18 +56,16 @@ public class PetService {
 
         try {
             // Generate random attributes
-            String petClass = getRandomPetClass();
             String subclass = getRandomSubclass();
             String colorHex = getRandomColor();
             PetExpression expression = getRandomExpression();
 
-            log.debug("Random attributes for user {}: class={}, subclass={}, color={}, expression={}",
-                    user.getUsername(), petClass, subclass, colorHex, expression);
+            log.debug("Random attributes for user {}: subclass={}, color={}, expression={}",
+                    user.getUsername(), subclass, colorHex, expression);
 
             // Create pet entity
             Pet pet = new Pet();
             pet.setUser(user);
-            pet.setClassType(petClass);
             pet.setSubclass(subclass);
             pet.setName(getRandomNameForSubclass(subclass));
             pet.setColorHex(colorHex);
@@ -171,10 +168,6 @@ public class PetService {
         }
     }
 
-    // Helper methods for random generation
-    private String getRandomPetClass() {
-        return PET_CLASSES[random.nextInt(PET_CLASSES.length)];
-    }
     private String getRandomNameForSubclass(String subclass) {
         String[] names = SPECIES_NAMES.getOrDefault(subclass,
                 new String[]{"Buddy", "Lucky", "Sparky", "Rosie", "Max", "Bella", "Charlie", "Daisy"});

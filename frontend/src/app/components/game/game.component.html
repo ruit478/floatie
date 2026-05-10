@@ -32,9 +32,6 @@
             <h2 class="pet-name">{{ pet.name}}</h2>
             <span class="pet-species">{{ pet.subclass }} · {{ pet.lifeStage }}</span>
             <span class="pet-level">Lv. {{ pet.level }} · {{ pet.xp }} XP</span>
-            @if (pet.isSick) {
-              <span class="status-badge sick">🤒 Sick</span>
-            }
             @if (pet.isAsleep) {
               <span class="status-badge asleep">💤 Asleep</span>
             }
@@ -61,9 +58,6 @@
         <div class="pet-footer">
           <span>Bond Level: {{ pet.bondLevel }}</span>
           <span>Age: {{ pet.ageDays }}d</span>
-          @if (pet.personality) {
-            <span>{{ pet.personality }}</span>
-          }
         </div>
 
       </div>

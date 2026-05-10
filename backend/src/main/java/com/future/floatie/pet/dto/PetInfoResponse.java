@@ -10,7 +10,6 @@ import java.util.UUID;
 public record PetInfoResponse(
         UUID id,
         String name,
-        String classType,
         String subclass,
         String colorHex,
         PetExpression expression,
@@ -40,7 +39,6 @@ public record PetInfoResponse(
         return new PetInfoResponse(
                 pet.getId(),
                 pet.getName(),
-                pet.getClassType(),
                 pet.getSubclass(),
                 pet.getColorHex(),
                 pet.getExpression(),

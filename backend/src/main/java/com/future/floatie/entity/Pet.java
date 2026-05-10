@@ -28,9 +28,6 @@ public class Pet {
     @Column(length = 50)
     private String name;
 
-    @Column(name = "class", nullable = false, length = 50)
-    private String classType;  // PetClass enum as String
-
     @Column(nullable = false, length = 50)
     private String subclass;
 

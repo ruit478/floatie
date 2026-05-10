@@ -1,36 +1,10 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
-import { HttpClient } from '@angular/common/http';
+
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of, map, startWith, Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
-
-interface PetInfo {
-  id: string;
-  name: string;
-  classType: string;
-  subclass: string;
-  colorHex: string;
-  expression: string;
-  spriteBase64: string;
-  hunger: number;
-  happiness: number;
-  energy: number;
-  health: number;
-  hygiene: number;
-  weight: number;
-  xp: number;
-  level: number;
-  lifeStage: string;
-  ageDays: number;
-  evolutionStage: number;
-  evolutionPath: string;
-  isSick: boolean;
-  isAsleep: boolean;
-  bondLevel: number;
-  personality: string | null;
-}
+import {PetService} from '../../services/pet.service';
 
 type PetState =
   | { status: 'loading' }
@@ -46,29 +20,33 @@ type PetState =
 })
 export class GameComponent {
   private authService = inject(AuthService);
-  private http = inject(HttpClient);
+  private petService = inject(PetService);
 
   readonly username = signal(this.authService.getUsername());
-  readonly spriteUrl = computed(() => {
-    const pet = this.pet();
-    return pet?.spriteBase64
-      ? `data:image/png;base64,${pet.spriteBase64}`
-      : null;
-  });
-  // requireSync is safe here because startWith guarantees
-  // a synchronous emission — the signal is never undefined.
+
   readonly petState = toSignal<PetState>(
-    this.http.get<PetInfo>(`${environment.apiUrl}/api/v1/pet/sprite/info`).pipe(
+    this.petService.getPetInfo().pipe(
       map((pet): PetState => ({ status: 'loaded', pet })),
-      catchError((): Observable<PetState> => of({ status: 'error', message: 'Could not load pet.' })),
+      catchError((): Observable<PetState> => of({
+        status: 'error',
+        message: 'Could not load pet. Please try again later.'
+      })),
       startWith<PetState>({ status: 'loading' })
     ),
     { requireSync: true }
   );
 
+  // Computed signals for different UI states
   readonly pet = computed(() => {
     const state = this.petState();
     return state.status === 'loaded' ? state.pet : null;
+  });
+
+  readonly spriteUrl = computed(() => {
+    const pet = this.pet();
+    return pet?.spriteBase64
+      ? `data:image/png;base64,${pet.spriteBase64}`
+      : null;
   });
 
   readonly isLoading = computed(() => this.petState().status === 'loading');
