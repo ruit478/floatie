@@ -10,7 +10,6 @@ import com.future.floatie.pet.enums.EvolutionPath;
 import com.future.floatie.pet.enums.PetExpression;
 import com.future.floatie.pet.enums.LifeStage;
 import com.future.floatie.repository.PetRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,8 +26,8 @@ public class PetService {
 
     private static final Random random = new Random();
 
-    private static final String[] SUBCLASSES = {"cat", "dog", "fox", "rabbit", "axolotl", "frog", "penguin", "parrot"};
-    private static final String[] COLORS = {"#FF6B9D", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"};
+    public static final String[] SUBCLASSES = {"cat", "dog", "fox", "rabbit", "axolotl", "frog", "penguin", "parrot"};
+    public static final String[] COLORS = {"#FF6B9D", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"};
     private static final Map<String, String[]> SPECIES_NAMES = Map.of(
             "cat", new String[]{"Whiskers", "Luna", "Simba", "Mittens", "Shadow", "Cleo", "Felix", "Oliver"},
             "dog", new String[]{"Buddy", "Max", "Bella", "Charlie", "Rocky", "Daisy", "Cooper", "Lola"},
@@ -40,15 +39,16 @@ public class PetService {
             "parrot", new String[]{"Rio", "Sky", "Rainbow", "Kiwi", "Coco", "Phoenix", "Tiki", "Zazu"}
     );
 
-
-    @Autowired
-    private PetRepository petRepository;
-
-    @Autowired
-    private PixelArtService pixelArtService;
+    private final PetRepository petRepository;
+    private final PixelArtService pixelArtService;
 
     @Value("${app.uploads.directory}")
     private String uploadsDirectory;
+
+    public PetService(PetRepository petRepository, PixelArtService pixelArtService) {
+        this.petRepository = petRepository;
+        this.pixelArtService = pixelArtService;
+    }
 
     @Transactional
     public Optional<Pet> createPetForUser(User user) {

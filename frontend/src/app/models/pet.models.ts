@@ -1,4 +1,4 @@
-interface PetInfo {
+export interface PetInfo {
   id: string;
   name: string;
   classType: string;

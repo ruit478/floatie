@@ -8,7 +8,6 @@ import com.future.floatie.pet.service.PetService;
 import com.future.floatie.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,31 +15,34 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/auth")
 @Slf4j
 public class AuthController {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final PetService petService;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private PetService petService;  // Separate service for pet creation
+    public AuthController(AuthenticationManager authenticationManager,
+                          UserRepository userRepository,
+                          PasswordEncoder passwordEncoder,
+                          JwtUtil jwtUtil,
+                          PetService petService) {
+        this.authenticationManager = authenticationManager;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+        this.petService = petService;
+    }
 
     @PostMapping("/register")
+    @Transactional
     public ResponseEntity<?> register(@Valid @RequestBody AuthRequest request) {
         log.info("Registration attempt for username='{}'", request.username());
         if (userRepository.existsByUsername(request.username())) {

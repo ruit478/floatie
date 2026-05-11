@@ -1,15 +1,11 @@
 package com.future.floatie.pet.controller;
 
-import com.future.floatie.entity.Pet;
 import com.future.floatie.pet.dto.PetInfoResponse;
 import com.future.floatie.pet.service.PetService;
 import com.future.floatie.pet.service.PixelArtService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,19 +14,19 @@ import org.springframework.web.bind.annotation.*;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/pet/sprite")
 public class SpriteController {
 
-    @Autowired
-    private PetService petService;
+    private final PetService petService;
+    private final PixelArtService pixelArtService;
 
-    @Autowired
-    private PixelArtService pixelArtService;
+    public SpriteController(PetService petService, PixelArtService pixelArtService) {
+        this.petService = petService;
+        this.pixelArtService = pixelArtService;
+    }
 
     @GetMapping("/info")
     public ResponseEntity<PetInfoResponse> getPetInfo(Authentication authentication) {

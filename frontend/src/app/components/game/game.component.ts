@@ -5,6 +5,7 @@ import { AuthService } from '../../services/auth.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of, map, startWith, Observable } from 'rxjs';
 import {PetService} from '../../services/pet.service';
+import {PetInfo} from '../../models/pet.models';
 
 type PetState =
   | { status: 'loading' }

@@ -54,18 +54,16 @@ public class PixelArtService {
     }
 
     private String getRandomSubclass() {
-        String[] subclasses = {"cat", "dog", "fox", "rabbit", "axolotl", "frog", "penguin", "parrot"};
-        return subclasses[random.nextInt(subclasses.length)];
+        return PetService.SUBCLASSES[random.nextInt(PetService.SUBCLASSES.length)];
     }
 
     private String getRandomColor() {
-        String[] colors = {"#FF6B9D", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"};
-        return colors[random.nextInt(colors.length)];
+        return PetService.COLORS[random.nextInt(PetService.COLORS.length)];
     }
 
     private String getRandomExpression() {
-        String[] expressions = {"HAPPY", "SAD", "MAD", "SLEEPY", "CONFUSED"};
-        return expressions[random.nextInt(expressions.length)];
+        PetExpression[] expressions = PetExpression.values();
+        return expressions[random.nextInt(expressions.length)].name();
     }
 
     /**

@@ -4,7 +4,6 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { JwtHelperService } from '@auth0/angular-jwt';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models/auth.models';
 import { environment } from '../../environments/environment';
 
@@ -16,11 +15,9 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  private jwtHelper = new JwtHelperService();
-
   constructor(
     private http: HttpClient,
-    private router: Router
+    private router: Router,
   ) {
     this.loadStoredUser();
   }
@@ -29,7 +26,7 @@ export class AuthService {
     const token = localStorage.getItem('access_token');
     const username = localStorage.getItem('username');
 
-    if (token && username && !this.jwtHelper.isTokenExpired(token)) {
+    if (token && username && !this.isTokenExpired(token)) {
       this.currentUserSubject.next({ username, token });
     }
   }
@@ -80,7 +77,7 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     const user = this.currentUserSubject.value;
-    return !!user && !this.jwtHelper.isTokenExpired(user.token);
+    return !!user && !this.isTokenExpired(user.token);
   }
 
   getToken(): string | null {
@@ -88,5 +85,17 @@ export class AuthService {
   }
   getUsername(): string | null {
     return this.currentUserSubject.value?.username ?? null;
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = token.split('.')[1];
+      const decoded = JSON.parse(atob(payload));
+      const exp = decoded.exp;
+      if (!exp) return true;
+      return Date.now() >= exp * 1000;
+    } catch {
+      return true;
+    }
   }
 }

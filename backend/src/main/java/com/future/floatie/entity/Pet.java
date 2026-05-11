@@ -13,97 +13,94 @@ import java.util.UUID;
 @Entity
 @Table(name = "pets")
 @Getter
-@Setter
 public class Pet {
 
-    // Getters and Setters
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @Setter
     private User user;
 
     @Column(length = 50)
+    @Setter
     private String name;
 
     @Column(nullable = false, length = 50)
+    @Setter
     private String subclass;
 
     @Column(name = "color_hex", nullable = false, length = 7)
+    @Setter
     private String colorHex;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Setter
     private PetExpression expression;
 
     // Core Stats (0-100)
     @Column(nullable = false)
+    @Setter
     private Integer hunger = 50;
 
     @Column(nullable = false)
+    @Setter
     private Integer happiness = 70;
 
     @Column(nullable = false)
+    @Setter
     private Integer energy = 80;
 
     @Column(nullable = false)
+    @Setter
     private Integer health = 100;
 
     @Column(nullable = false)
+    @Setter
     private Integer hygiene = 80;
 
     @Column(nullable = false)
+    @Setter
     private Integer weight = 50;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "life_stage", nullable = false, length = 20)
+    @Setter
     private LifeStage lifeStage;
 
     @Column(name = "age_days", nullable = false)
+    @Setter
     private Integer ageDays = 0;
-
 
     // Progression
     @Column(nullable = false)
+    @Setter
     private Integer xp = 0;
 
     @Column(nullable = false)
+    @Setter
     private Integer level = 1;
 
     // Evolution
     @Enumerated(EnumType.STRING)
     @Column(name = "evolution_path", length = 20)
+    @Setter
     private EvolutionPath evolutionPath = EvolutionPath.WELL_RAISED;
 
     @Column(name = "evolution_stage", nullable = false)
+    @Setter
     private Integer evolutionStage = 1;
 
     @Column(name = "is_asleep", nullable = false)
+    @Setter
     private Boolean isAsleep = false;
 
     @Column(name = "bond_level", nullable = false)
+    @Setter
     private Integer bondLevel = 0;
-
-    // Timestamps for decay calculations
-    @Column(name = "last_fed_at")
-    private LocalDateTime lastFedAt;
-
-    @Column(name = "last_played_at")
-    private LocalDateTime lastPlayedAt;
-
-    @Column(name = "last_cleaned_at")
-    private LocalDateTime lastCleanedAt;
-
-    @Column(name = "last_bathed_at")
-    private LocalDateTime lastBathedAt;
-
-    @Column(name = "last_slept_at")
-    private LocalDateTime lastSleptAt;
-
-    @Column(name = "last_decay_calc")
-    private LocalDateTime lastDecayCalc;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -111,16 +108,10 @@ public class Pet {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // PrePersist and PreUpdate hooks
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        lastDecayCalc = LocalDateTime.now();
-        lastFedAt = LocalDateTime.now();
-        lastPlayedAt = LocalDateTime.now();
-        lastCleanedAt = LocalDateTime.now();
-        lastBathedAt = LocalDateTime.now();
     }
 
     @PreUpdate

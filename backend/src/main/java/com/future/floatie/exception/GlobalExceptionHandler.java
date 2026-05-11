@@ -11,28 +11,38 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
+        Map<String, String> fieldErrors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
+            fieldErrors.put(fieldName, errorMessage);
         });
-        log.warn("Validation error: {}", errors);
+
+        String summary = fieldErrors.values().stream()
+                .collect(Collectors.joining("; "));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", summary);
+        response.put("errors", fieldErrors);
+
+        log.warn("Validation error: {}", fieldErrors);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(errors);
+                .body(response);
     }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
-        return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
+        return ResponseEntity.internalServerError().body(Map.of("message", "Internal server error"));
     }
 }

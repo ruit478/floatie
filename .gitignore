@@ -41,7 +41,7 @@ backend/sprites/*
 backend/.mvn/wrapper/maven-wrapper.jar
 !backend/.mvn/wrapper/maven-wrapper.jar
 backend/.mvn/wrapper/maven-wrapper.properties
-
+.claude/
 # Frontend
 frontend/node_modules/
 frontend/dist/

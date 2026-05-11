@@ -37,8 +37,7 @@ export class LoginComponent {
     this.submitSubject.pipe(
       switchMap((credentials) =>
         this.authService.login(credentials).pipe(
-          switchMap((response) => {
-            console.log('Login successful:', response.message);
+          switchMap(() => {
             this.router.navigate([this.returnUrl]);
             return of({ loading: false, error: null } as const);
           }),

@@ -3,12 +3,8 @@ package com.future.floatie.entity;
 
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -16,7 +12,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "users")
 @Getter
-@Setter
 public class User {
 
     @Id
@@ -24,15 +19,19 @@ public class User {
     private UUID id;
 
     @Column(nullable = false, unique = true, length = 50)
+    @Setter
     private String username;
 
     @Column
+    @Setter
     private String email;
 
     @Column(name = "password_hash", nullable = false, length = 255)
+    @Setter
     private String passwordHash;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Setter
     private Pet pet;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -42,6 +41,7 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Column(name = "last_login_at")
+    @Setter
     private LocalDateTime lastLoginAt;
 
     @PrePersist
