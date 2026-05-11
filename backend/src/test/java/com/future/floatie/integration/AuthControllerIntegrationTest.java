@@ -257,7 +257,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
 
             String token = objectMapper.readTree(body).get("token").asText();
 
-            mockMvc.perform(get("/api/v1/pet/sprite/info")
+            mockMvc.perform(get("/api/v1/pet/info")
                             .header("Authorization", "Bearer " + token))
                     .andExpect(status().isOk());
         }
@@ -266,14 +266,14 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         void invalidToken_onProtectedEndpoint_returnsForbidden() throws Exception {
             String fakeToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoYWNrZXIifQ.invalidsignature";
 
-            mockMvc.perform(get("/api/v1/pet/sprite/info")
+            mockMvc.perform(get("/api/v1/pet/info")
                             .header("Authorization", "Bearer " + fakeToken))
                     .andExpect(status().isForbidden());
         }
 
         @Test
         void noToken_onProtectedEndpoint_returnsForbidden() throws Exception {
-            mockMvc.perform(get("/api/v1/pet/sprite/info"))
+            mockMvc.perform(get("/api/v1/pet/info"))
                     .andExpect(status().isForbidden());
         }
     }

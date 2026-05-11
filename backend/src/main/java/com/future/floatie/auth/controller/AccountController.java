@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -35,11 +36,12 @@ public class AccountController {
             return ResponseEntity.notFound().build();
         }
 
-        if (user.getPet() != null) {
-            petService.deleteSpriteForPet(user.getPet().getId());
-        }
-
+        UUID petId = user.getPet() != null ? user.getPet().getId() : null;
         userRepository.delete(user);
+
+        if (petId != null) {
+            petService.deleteSpriteForPet(petId);
+        }
         log.info("Account deleted for user: {}", username);
 
         return ResponseEntity.ok(Map.of("message", "Account deleted"));

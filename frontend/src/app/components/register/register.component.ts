@@ -1,20 +1,18 @@
 // frontend/src/app/components/register/register.component.ts
 import { Component, inject, DestroyRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { RegisterRequest } from '../../models/auth.models';
 import { FieldErrorComponent } from '../shared/field-error.component';
-import { Subject, of } from 'rxjs';
-import { switchMap, catchError } from 'rxjs/operators';
+import { Subject, of, concat } from 'rxjs';
+import { switchMap, catchError, tap, map } from 'rxjs/operators';
 import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-register',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     RouterModule,
     FieldErrorComponent
@@ -35,14 +33,15 @@ export class RegisterComponent {
   registrationState = toSignal(
     this.submitSubject.pipe(
       switchMap((payload) =>
-        this.authService.register(payload).pipe(
-          switchMap(() => {
-            this.router.navigate(['/game']);
-            return of({ loading: false, error: null } as const);
-          }),
-          catchError((error) => {
-            return of({ loading: false, error: error.message || 'Registration failed. Please try again.' } as const);
-          })
+        concat(
+          of({ loading: true, error: null } as const),
+          this.authService.register(payload).pipe(
+            tap(() => this.router.navigate(['/game'])),
+            map(() => ({ loading: false, error: null } as const)),
+            catchError((error) => {
+              return of({ loading: false, error: error.message || 'Registration failed. Please try again.' } as const);
+            })
+          )
         )
       ),
       takeUntilDestroyed(this.destroyRef)

@@ -1,14 +1,14 @@
-<div class="modal-overlay">
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="death-modal-title" (keydown)="onKeydown($event)">
   <div class="modal-card">
-    <h2 class="modal-title">Your pet has passed away…</h2>
+    <h2 id="death-modal-title" class="modal-title">Your pet has passed away…</h2>
     <p class="modal-body">
       Despite your best efforts, your beloved companion has moved on to the great pixel beyond.
     </p>
     <div class="modal-actions">
-      <button class="modal-btn primary" (click)="replace.emit()">
+      <button #firstBtn type="button" class="modal-btn primary" (click)="replace.emit()">
         Generate new pet
       </button>
-      <button class="modal-btn danger" (click)="deleteAccount.emit()">
+      <button type="button" class="modal-btn danger" (click)="deleteAccount.emit()">
         Delete account
       </button>
     </div>

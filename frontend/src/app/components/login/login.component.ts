@@ -3,17 +3,15 @@ import { Component, inject, DestroyRef } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { CommonModule } from '@angular/common';
 import { FieldErrorComponent } from '../shared/field-error.component';
-import { Subject, of } from 'rxjs';
-import { switchMap, catchError } from 'rxjs/operators';
+import { Subject, of, concat } from 'rxjs';
+import { switchMap, catchError, tap, map } from 'rxjs/operators';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     RouterModule,
     FieldErrorComponent
@@ -36,17 +34,18 @@ export class LoginComponent {
   loginState = toSignal(
     this.submitSubject.pipe(
       switchMap((credentials) =>
-        this.authService.login(credentials).pipe(
-          switchMap(() => {
-            this.router.navigate([this.returnUrl]);
-            return of({ loading: false, error: null } as const);
-          }),
-          catchError((error) => {
-            return of({
-              loading: false,
-              error: error.message || 'Login failed. Please try again.'
-            } as const);
-          })
+        concat(
+          of({ loading: true, error: null } as const),
+          this.authService.login(credentials).pipe(
+            tap(() => this.router.navigate([this.returnUrl])),
+            map(() => ({ loading: false, error: null } as const)),
+            catchError((error) => {
+              return of({
+                loading: false,
+                error: error.message || 'Login failed. Please try again.'
+              } as const);
+            })
+          )
         )
       ),
       takeUntilDestroyed(this.destroyRef)
@@ -60,7 +59,10 @@ export class LoginComponent {
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
 
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/game';
+    const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+    this.returnUrl = (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//'))
+      ? returnUrl
+      : '/game';
   }
 
   onSubmit(): void {

@@ -2,9 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+See `CODE-QUALITY-BUCKET.md` for a prioritized list of remaining issues — check it at the start of each session before writing new code.
+
 ## Project Overview
 
-Floatie is a virtual pet application — users register, log in, and get a procedurally-generated pixel-art pet. The backend is Java 25 / Spring Boot 4.1; the frontend is Angular 21 with zoneless change detection and standalone components.
+Floatie is a virtual pet application — users register, log in, and get a procedurally-generated pixel-art pet. The backend is Java 25 / Spring Boot 4.0; the frontend is Angular 21.2 with zoneless change detection and standalone components.
 
 ## Commands
 
@@ -23,8 +25,7 @@ The `bootRun` task accepts `-PjvmArgs=<args>` for JVM flags.
 
 ```bash
 npm start                  # ng serve (port 4200)
-npm test                   # Karma unit tests (ng test)
-npx ng test                # Alias
+npm test                   # Karma unit tests (only app.component.spec.ts exists)
 npm run test:pet           # Playwright E2E test (pet creation flow)
 npm run build              # Production build
 ```
@@ -39,29 +40,41 @@ docker compose up          # Postgres 16 + backend, both with health checks
 
 ### Backend (`backend/src/main/java/com/future/floatie/`)
 
-**Auth flow:** Stateless JWT. `AuthController` (`/auth/register`, `/auth/login`) is publicly accessible. All other endpoints require a `Bearer` token. `JwtAuthenticationFilter` extracts and validates the token on each request, skipping `/auth/**`, `/actuator/health`, `/api/hello`, and `/api/status` paths.
+**Auth flow:** Stateless JWT. `AuthController` (`/auth/register`, `/auth/login`) is publicly accessible. All other endpoints require a `Bearer` token except for `/actuator/health` and `/api/v1/pet/sprite/generate`. `JwtAuthenticationFilter` extracts and validates the token on each request, skipping only `/auth/**` paths.
 
 **Security:** `SecurityConfig` disables CSRF, sets session management to STATELESS, and configures CORS from `app.cors.allowed-origins`. Passwords are BCrypt (strength 12).
 
-**Entities:** `User` (UUID PK, username, email, passwordHash) has a 1:1 relationship with `Pet`. `Pet` holds subclass, colorHex, expression, lifeStage, 6 core stats (0-100), progression fields (xp, level, evolutionStage, evolutionPath), and timestamp columns for decay calculations.
+**Endpoints:**
+- `AuthController` (`/auth`) — register, login (public)
+- `AccountController` (`/api/v1/account`) — DELETE account (authenticated)
+- `PetController` (`/api/v1/pet`) — `/info`, `/status` (GET); `/feed`, `/play`, `/rest`, `/clean`, `/heal`, `/sleep`, `/wake`, `/replace` (POST) — all authenticated
+- `SpriteController` (`/api/v1/pet/sprite`) — `/generate` (POST, public) returns a random PNG sprite
 
-**Pet/sprite system:** `PetService.createPetForUser()` generates a random pet (species, color, name, expression) and saves a PNG sprite to disk via `PixelArtService`. The sprite is returned as base64 in `GET /api/v1/pet/sprite/info`. `PixelArtService` generates 128×128 pixel art from a 32×32 grid — each species has a template, colors are overlaid, expressions draw facial features (eyes/mouth), and evolution paths apply visual modifications (glow, widen, or "neglected" patches).
+**Entities:** `User` (UUID PK, username, email, passwordHash) has a 1:1 relationship with `Pet`. `Pet` holds subclass, colorHex, expression, lifeStage, 6 core stats (0-100), progression fields (xp, level, evolutionStage, evolutionPath), accessory fields (accessoryType, accessoryColorHex), bondLevel, isAsleep, and timestamp columns for decay calculations.
 
-**Enums:** `LifeStage` (EGG → BABY → CHILD → TEEN → ADULT → ELDER → DEAD), `EvolutionPath` (PERFECT, WELL_RAISED, NEGLECTED, OVERWEIGHT), `PetExpression` (HAPPY, SAD, MAD, SLEEPY, CONFUSED).
+**Pet/sprite system:** `PetService.createPetForUser()` generates a random pet (species, color, name, expression, accessory) and saves a PNG sprite to disk via `PixelArtService`. The sprite is returned as base64 in `GET /api/v1/pet/info`. `PixelArtService` generates 128×128 pixel art from a 32×32 grid — each species has a template, colors are overlaid, expressions draw facial features (eyes/mouth), accessories render on top, and evolution paths apply visual modifications (glow, widen, or "neglected" patches).
 
-**Testing:** Integration tests extend `IntegrationTestBase` which provides a shared Testcontainers PostgreSQL container and registers all required Spring properties (`spring.datasource.*`, `app.uploads.directory`, `app.cors.allowed-origins`, `jwt.secret`, `jwt.expiration`). Tests use `@SpringBootTest` + `@AutoConfigureMockMvc` and clean the database with `@BeforeEach`.
+**Enums:** `LifeStage` (EGG → BABY → CHILD → TEEN → ADULT → ELDER → DEAD), `EvolutionPath` (PERFECT, WELL_RAISED, NEGLECTED, OVERWEIGHT), `PetExpression` (HAPPY, SAD, MAD, SLEEPY, CONFUSED), `AccessoryType` (CROWN, COLLAR, BOW, GLASSES, NONE).
+
+**Testing:** Integration tests extend `IntegrationTestBase` which provides a shared Testcontainers PostgreSQL container and registers all required Spring properties. Tests use `@SpringBootTest` + `@AutoConfigureMockMvc` and clean the database with `@BeforeEach`. Integration tests exist for auth, pet, and sprite controllers.
 
 ### Frontend (`frontend/src/app/`)
 
+**Structure:** Components live in `components/` (game, login, register, death-modal, toast) with a `shared/field-error` reusable component. Services, guards, interceptors, and models are at the top level.
+
 **Routing:** Three routes — `/login`, `/register` (both guarded by `GuestGuard` which redirects authenticated users to `/game`), and `/game` (guarded by `AuthGuard`). Default and wildcard redirect to `/login`.
 
-**Auth:** `AuthService` stores JWT + username in `localStorage`, exposes a `BehaviorSubject<User|null>` as `currentUser$`, and provides `isAuthenticated()` (checks token expiry via `@auth0/angular-jwt`). The `authInterceptor` (functional) attaches `Authorization: Bearer <token>` to all requests except those to `/auth/`. On 401 responses it calls `logout()`.
+**Auth:** `AuthService` stores JWT + username in `localStorage`, exposes a `BehaviorSubject<User|null>` as `currentUser$`, and provides `isAuthenticated()` which manually decodes the JWT payload to check expiry. The `authInterceptor` (functional) attaches `Authorization: Bearer <token>` to all requests except those to `/auth/`. On 401 responses it calls `logout()`. `deleteAccount()` calls `DELETE /api/v1/account` then clears local state.
 
-**Game component:** Uses `inject()` and `toSignal()` to fetch pet info from `PetService`, exposing reactive `pet`, `spriteUrl`, `isLoading`, `error`, and `coreStats` computed signals. The sprite is rendered from the base64 payload as a data URI.
+**Game component:** Uses `inject()` with a discriminated union `PetState` (`loading` | `loaded` | `error`) stored in a signal. Pet data is fetched via `firstValueFrom` with `DestroyRef` guarding against updates after destroy. Actions (`feed`, `play`, `rest`, `clean`, `heal`, `toggleSleep`, `replacePet`) use `firstValueFrom` and check busy/dead/asleep guards before proceeding. `detectEvents()` compares old and new state to emit toast notifications for life stage, evolution, and level changes.
 
-**Component style:** All components are standalone, using functional guards (`AuthGuard`, `GuestGuard`) and a functional HTTP interceptor (`authInterceptor`). The app uses `provideZonelessChangeDetection()`.
+**Toast system:** `ToastService` manages a signal-based toast queue with auto-dismiss (4 seconds). Toast types: `info`, `success`, `warning`. Used for action feedback, lifecycle events, and error messaging.
+
+**Component style:** All components are standalone, using functional guards (`AuthGuard`, `GuestGuard`) and a functional HTTP interceptor (`authInterceptor`). The app uses `provideZonelessChangeDetection()` and `provideBrowserGlobalErrorListeners()`.
 
 **Environments:** `environment.ts` points `apiUrl` to `http://localhost:8080`; `environment.prod.ts` has a placeholder production URL.
+
+**Testing:** One unit test file (`app.component.spec.ts`). E2E tests live in `tests/petCreation.spec.js` using Playwright.
 
 ### Docker / Infrastructure
 

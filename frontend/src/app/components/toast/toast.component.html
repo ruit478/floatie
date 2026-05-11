@@ -1,6 +1,6 @@
 <div class="toast-container">
   @for (toast of toasts(); track toast.id) {
-    <div class="toast" [class]="toast.type">
+    <div class="toast" [class]="toast.type" role="alert" aria-live="polite">
       <span class="toast-msg">{{ toast.message }}</span>
     </div>
   }

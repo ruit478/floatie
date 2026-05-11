@@ -81,7 +81,6 @@ export class AuthService {
   };
 
   private handleError(error: any): Observable<never> {
-    console.log('Error body:', error.error);
     const message = error.error?.message ?? this.errorMessages[error.status] ?? 'An error occurred';
     return throwError(() => new Error(message));
   }

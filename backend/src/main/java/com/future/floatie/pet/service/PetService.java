@@ -159,11 +159,10 @@ public class PetService {
             // Generate and save sprite
             generateAndSaveSprite(savedPet);
 
-            Pet finalPet = petRepository.save(savedPet);
             log.info("Pet creation completed successfully for user: {} -> petId: {}, species: {}",
-                    user.getUsername(), finalPet.getId(), subclass);
+                    user.getUsername(), savedPet.getId(), subclass);
 
-            return Optional.of(finalPet);
+            return Optional.of(savedPet);
 
         } catch (IOException e) {
             log.error("Failed to create pet for user: {} - IO error: {}", user.getUsername(), e.getMessage());
@@ -177,14 +176,14 @@ public class PetService {
     private void generateAndSaveSprite(Pet pet) throws IOException {
         log.debug("Generating sprite for petId: {}", pet.getId());
 
-        // Generate sprite image
         java.awt.image.BufferedImage sprite = pixelArtService.generatePetSprite(pet);
 
-        // Save to disk
         String filename = pet.getId().toString() + ".png";
         Path filePath = Paths.get(uploadsDirectory, filename);
+        Path tmpPath = Paths.get(uploadsDirectory, filename + ".tmp");
         Files.createDirectories(filePath.getParent());
-        javax.imageio.ImageIO.write(sprite, "PNG", filePath.toFile());
+        javax.imageio.ImageIO.write(sprite, "PNG", tmpPath.toFile());
+        Files.move(tmpPath, filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
         log.debug("Sprite saved to disk: {}", filePath);
     }
@@ -258,6 +257,7 @@ public class PetService {
         return expressions[random.nextInt(expressions.length)];
     }
 
+    @Transactional
     public Optional<PetInfoResponse> getPetInfo(String username) {
         return petRepository.findByUser_Username(username).map(pet -> {
             applyDecay(pet);
@@ -278,7 +278,6 @@ public class PetService {
     //  Pet status — returns current state with decay applied
     // ═══════════════════════════════════════════════════════════════════
 
-    @Transactional
     public Optional<PetInfoResponse> getPetStatus(String username) {
         return getPetInfo(username);
     }
@@ -361,6 +360,7 @@ public class PetService {
     /** Common interaction wrapper: fetch pet, apply decay, run action, save. */
     private Optional<PetInfoResponse> interact(String username, java.util.function.Consumer<Pet> action) {
         return petRepository.findByUser_Username(username).map(pet -> {
+            if (pet.getLifeStage() == LifeStage.DEAD) return null;
             applyDecay(pet);
             action.accept(pet);
             petRepository.save(pet);
@@ -550,11 +550,15 @@ public class PetService {
     public Optional<Pet> replacePetForUsername(String username) {
         return petRepository.findByUser_Username(username).map(oldPet -> {
             User user = oldPet.getUser();
-            deleteSpriteForPet(oldPet.getId());
-            user.setPet(null); // break bidirectional link before delete to avoid unique-constraint violation
-            petRepository.delete(oldPet);
-            petRepository.flush();
-            return createPetForUser(user).orElse(null);
+            // Create new pet before deleting old one so no 404 window exists
+            Optional<Pet> newPetOpt = createPetForUser(user);
+            if (newPetOpt.isPresent()) {
+                deleteSpriteForPet(oldPet.getId());
+                user.setPet(null);
+                petRepository.delete(oldPet);
+                petRepository.flush();
+            }
+            return newPetOpt.orElse(null);
         });
     }
 

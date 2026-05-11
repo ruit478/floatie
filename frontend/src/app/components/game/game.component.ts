@@ -1,11 +1,11 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { PetService } from '../../services/pet.service';
 import { ToastService } from '../../services/toast.service';
 import { PetInfo } from '../../models/pet.models';
 import { DeathModalComponent } from '../death-modal/death-modal.component';
 import { ToastComponent } from '../toast/toast.component';
+import { firstValueFrom } from 'rxjs';
 
 type PetState =
   | { status: 'loading' }
@@ -15,7 +15,7 @@ type PetState =
 @Component({
   selector: 'app-game',
   standalone: true,
-  imports: [CommonModule, DeathModalComponent, ToastComponent],
+  imports: [DeathModalComponent, ToastComponent],
   templateUrl: './game.component.html',
   styleUrl: './game.component.css'
 })
@@ -23,6 +23,7 @@ export class GameComponent implements OnInit {
   private authService = inject(AuthService);
   private petService = inject(PetService);
   private toastService = inject(ToastService);
+  private destroyRef = inject(DestroyRef);
 
   readonly username = signal(this.authService.getUsername());
 
@@ -69,7 +70,7 @@ export class GameComponent implements OnInit {
 
   readonly canFeed  = computed(() => { const p = this.pet(); return p && p.hunger < 100 && !p.isAsleep && !this.isBusy() && !this.isDead(); });
   readonly canPlay  = computed(() => { const p = this.pet(); return p && p.energy > 0 && !p.isAsleep && !this.isBusy() && !this.isDead(); });
-  readonly canRest  = computed(() => { const p = this.pet(); return p && p.energy < 100 && !this.isBusy() && !this.isDead(); });
+  readonly canRest  = computed(() => { const p = this.pet(); return p && p.energy < 100 && !p.isAsleep && !this.isBusy() && !this.isDead(); });
   readonly canClean = computed(() => { const p = this.pet(); return p && p.hygiene < 100 && !this.isBusy() && !this.isDead(); });
   readonly canHeal  = computed(() => { const p = this.pet(); return p && p.health < 100 && !this.isBusy() && !this.isDead(); });
 
@@ -77,9 +78,12 @@ export class GameComponent implements OnInit {
 
   loadPet(): void {
     this.petState.set({ status: 'loading' });
-    this.petService.getPetInfo().subscribe({
-      next: (pet) => this.petState.set({ status: 'loaded', pet }),
-      error: () => this.petState.set({ status: 'error', message: 'Could not load pet.' })
+    firstValueFrom(this.petService.getPetInfo()).then(pet => {
+      if (this.destroyRef.destroyed) return;
+      this.petState.set({ status: 'loaded', pet });
+    }).catch(() => {
+      if (this.destroyRef.destroyed) return;
+      this.petState.set({ status: 'error', message: 'Could not load pet.' });
     });
   }
 
@@ -95,19 +99,17 @@ export class GameComponent implements OnInit {
     this.doAction(p.isAsleep ? 'wake' : 'sleep', action);
   }
 
-  private doAction(label: string, request$: import('rxjs').Observable<PetInfo>): void {
+  private doAction(label: string, request$: ReturnType<PetService['feed']>): void {
     if (this.isBusy()) return;
     this.actionInProgress.set(label);
     const oldPet = this.pet();
-    request$.subscribe({
-      next: (pet) => {
-        this.detectEvents(oldPet, pet);
-        this.petState.set({ status: 'loaded', pet });
-        this.actionInProgress.set(null);
-      },
-      error: () => {
-        this.actionInProgress.set(null);
-      }
+    firstValueFrom(request$).then(pet => {
+      this.detectEvents(oldPet, pet);
+      this.petState.set({ status: 'loaded', pet });
+      this.actionInProgress.set(null);
+    }).catch(() => {
+      this.actionInProgress.set(null);
+      this.toastService.show(`Failed to ${label} — please try again.`, 'warning');
     });
   }
 
@@ -129,16 +131,17 @@ export class GameComponent implements OnInit {
 
   replacePet(): void {
     this.petState.set({ status: 'loading' });
-    this.petService.replacePet().subscribe({
-      next: (pet) => {
-        this.petState.set({ status: 'loaded', pet });
-        this.toastService.show(`A new ${pet.subclass} named ${pet.name} has arrived!`, 'success');
-      },
-      error: () => this.petState.set({ status: 'error', message: 'Could not create a new pet.' })
+    firstValueFrom(this.petService.replacePet()).then(pet => {
+      this.petState.set({ status: 'loaded', pet });
+      this.toastService.show(`A new ${pet.subclass} named ${pet.name} has arrived!`, 'success');
+    }).catch(() => {
+      this.petState.set({ status: 'error', message: 'Could not create a new pet.' });
     });
   }
 
   deleteAccount(): void {
-    this.authService.deleteAccount().subscribe();
+    firstValueFrom(this.authService.deleteAccount()).catch(() => {
+      this.toastService.show('Failed to delete account. Please try again.', 'warning');
+    });
   }
 }
