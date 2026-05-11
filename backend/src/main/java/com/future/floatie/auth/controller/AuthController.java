@@ -8,6 +8,7 @@ import com.future.floatie.pet.service.PetService;
 import com.future.floatie.repository.UserRepository;
 import jakarta.validation.Valid;
 import java.util.Map;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -107,5 +108,27 @@ public class AuthController {
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Invalid username or password"));
         }
+    }
+
+    @DeleteMapping("/account")
+    @Transactional
+    public ResponseEntity<?> deleteAccount(Authentication authentication) {
+        String username = authentication.getName();
+        log.info("Account deletion requested for user: {}", username);
+
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        UUID petId = user.getPet() != null ? user.getPet().getId() : null;
+        userRepository.delete(user);
+
+        if (petId != null) {
+            petService.deleteSpriteForPet(petId);
+        }
+        log.info("Account deleted for user: {}", username);
+
+        return ResponseEntity.ok(Map.of("message", "Account deleted"));
     }
 }

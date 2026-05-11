@@ -55,7 +55,7 @@ export class AuthService {
   }
 
   deleteAccount(): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/api/v1/account`).pipe(
+    return this.http.delete<void>(`${this.apiUrl}/auth/account`).pipe(
       tap(() => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('username');

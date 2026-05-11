@@ -40,13 +40,12 @@ docker compose up          # Postgres 16 + backend, both with health checks
 
 ### Backend (`backend/src/main/java/com/future/floatie/`)
 
-**Auth flow:** Stateless JWT. `AuthController` (`/auth/register`, `/auth/login`) is publicly accessible. All other endpoints require a `Bearer` token except for `/actuator/health` and `/api/v1/pet/sprite/generate`. `JwtAuthenticationFilter` extracts and validates the token on each request, skipping only `/auth/**` paths.
+**Auth flow:** Stateless JWT. `AuthController` handles `/auth/register`, `/auth/login` (public), and `DELETE /auth/account` (authenticated). All other endpoints require a `Bearer` token except for `/actuator/health` and `/api/v1/pet/sprite/generate`. `JwtAuthenticationFilter` extracts and validates the token on each request, skipping `/auth/register` and `/auth/login` only.
 
-**Security:** `SecurityConfig` disables CSRF, sets session management to STATELESS, and configures CORS from `app.cors.allowed-origins`. Passwords are BCrypt (strength 12).
+**Security:** `SecurityConfig` disables CSRF, sets session management to STATELESS, and configures CORS from `app.cors.allowed-origins`. Passwords are BCrypt (strength 12). Public paths: `/auth/register`, `/auth/login`, `/actuator/health`, `/api/v1/pet/sprite/generate`.
 
 **Endpoints:**
-- `AuthController` (`/auth`) — register, login (public)
-- `AccountController` (`/api/v1/account`) — DELETE account (authenticated)
+- `AuthController` (`/auth`) — register, login (public); DELETE account (authenticated)
 - `PetController` (`/api/v1/pet`) — `/info`, `/status` (GET); `/feed`, `/play`, `/rest`, `/clean`, `/heal`, `/sleep`, `/wake`, `/replace` (POST) — all authenticated
 - `SpriteController` (`/api/v1/pet/sprite`) — `/generate` (POST, public) returns a random PNG sprite
 
@@ -64,7 +63,7 @@ docker compose up          # Postgres 16 + backend, both with health checks
 
 **Routing:** Three routes — `/login`, `/register` (both guarded by `GuestGuard` which redirects authenticated users to `/game`), and `/game` (guarded by `AuthGuard`). Default and wildcard redirect to `/login`.
 
-**Auth:** `AuthService` stores JWT + username in `localStorage`, exposes a `BehaviorSubject<User|null>` as `currentUser$`, and provides `isAuthenticated()` which manually decodes the JWT payload to check expiry. The `authInterceptor` (functional) attaches `Authorization: Bearer <token>` to all requests except those to `/auth/`. On 401 responses it calls `logout()`. `deleteAccount()` calls `DELETE /api/v1/account` then clears local state.
+**Auth:** `AuthService` stores JWT + username in `localStorage`, exposes a `BehaviorSubject<User|null>` as `currentUser$`, and provides `isAuthenticated()` which manually decodes the JWT payload to check expiry. The `authInterceptor` (functional) attaches `Authorization: Bearer <token>` to all requests except those to `/auth/`. On 401 responses it calls `logout()`. `deleteAccount()` calls `DELETE /auth/account` then clears local state.
 
 **Game component:** Uses `inject()` with a discriminated union `PetState` (`loading` | `loaded` | `error`) stored in a signal. Pet data is fetched via `firstValueFrom` with `DestroyRef` guarding against updates after destroy. Actions (`feed`, `play`, `rest`, `clean`, `heal`, `toggleSleep`, `replacePet`) use `firstValueFrom` and check busy/dead/asleep guards before proceeding. `detectEvents()` compares old and new state to emit toast notifications for life stage, evolution, and level changes.
 

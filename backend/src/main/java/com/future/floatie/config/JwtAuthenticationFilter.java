@@ -63,7 +63,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        boolean shouldSkip = path.startsWith("/auth/");
+        boolean shouldSkip = path.startsWith("/auth/") && !path.equals("/auth/account");
 
         log.debug("Path='{}' skipJwtFilter={}", path, shouldSkip);
         return shouldSkip;
