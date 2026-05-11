@@ -1,5 +1,6 @@
 package com.future.floatie.entity;
 
+import com.future.floatie.pet.enums.AccessoryType;
 import com.future.floatie.pet.enums.EvolutionPath;
 import com.future.floatie.pet.enums.LifeStage;
 import com.future.floatie.pet.enums.PetExpression;
@@ -40,6 +41,15 @@ public class Pet {
     @Column(nullable = false, length = 20)
     @Setter
     private PetExpression expression;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "accessory_type", length = 20)
+    @Setter
+    private AccessoryType accessoryType = AccessoryType.NONE;
+
+    @Column(name = "accessory_color_hex", length = 7)
+    @Setter
+    private String accessoryColorHex;
 
     // Core Stats (0-100)
     @Column(nullable = false)

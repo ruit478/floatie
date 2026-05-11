@@ -8,446 +8,703 @@ import org.springframework.stereotype.Service;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
+/**
+ * Generates 32×32 native-resolution pixel-art sprites and upscales them
+ * to 128×128 with nearest-neighbour interpolation.
+ *
+ * Every pixel maps to exactly one entry in a strict 7-colour palette.
+ * No anti-aliasing, no gradients, no sub-pixel rendering.
+ *
+ * Sprite sheets use a fixed frame grid (one row, N columns, 32×32 per frame).
+ */
 @Service
 @Slf4j
 public class PixelArtService {
 
-    private static final int SPRITE_SIZE = 128;
-    private static final int PIXEL_SCALE = 4;
-    private static final int GRID_SIZE = SPRITE_SIZE / PIXEL_SCALE;
-    private static final Random random = new Random();
+    private static final int NATIVE = 32;
+    private static final int OUTPUT = 128;
+    private static final int SCALE  = OUTPUT / NATIVE; // 4
 
-    private static final Map<String, Color> COLOR_PALETTE = Map.of(
-            "#FF6B9D", new Color(255, 107, 157),
-            "#4ECDC4", new Color(78, 205, 196),
-            "#45B7D1", new Color(69, 183, 209),
-            "#96CEB4", new Color(150, 206, 180),
-            "#FFEAA7", new Color(255, 234, 167),
-            "#DDA0DD", new Color(221, 160, 221),
-            "#98D8C8", new Color(152, 216, 200),
-            "#F7B787", new Color(247, 183, 135),
-            "#B5EAD7", new Color(181, 234, 215),
-            "#C7CEEA", new Color(199, 206, 234)
-    );
+    // ── Palette indices (5-7 colours total per palette) ──────────────
+    private static final byte _T = 0; // transparent
+    private static final byte _O = 1; // outline
+    private static final byte _B = 2; // body (base colour)
+    private static final byte _H = 3; // highlight
+    private static final byte _S = 4; // shadow
+    private static final byte _W = 5; // white
+    private static final byte _E = 6; // eye / pupil
+    private static final byte _D = 7; // detail (pink blush / inner ear)
 
-    public BufferedImage generateRandomSprite() {
-        log.debug("Generating random sprite");
+    // Fixed palette entries (shared across all sprites)
+    private static final Color C_OUTLINE = new Color(0x2D, 0x1A, 0x0E);
+    private static final Color C_WHITE   = new Color(0xFF, 0xFF, 0xFF);
+    private static final Color C_EYE     = new Color(0x1A, 0x1A, 0x1A);
+    private static final Color C_DETAIL  = new Color(0xFF, 0x99, 0x99);
 
-        // Generate random attributes
-        String subclass = getRandomSubclass();
-        String colorHex = getRandomColor();
-        String expression = getRandomExpression();
-        int evolutionStage = 1; // Base stage
+    private static final Random RNG = new Random();
 
-        log.debug("Random attributes: subclass={}, color={}, expression={}", subclass, colorHex, expression);
+    // ═══════════════════════════════════════════════════════════════════
+    //  Public API
+    // ═══════════════════════════════════════════════════════════════════
 
-        // Generate sprite using existing methods
-        int[][] pixelGrid = getSpeciesTemplate(subclass);
-        Color petColor = COLOR_PALETTE.getOrDefault(colorHex, Color.GRAY);
-        pixelGrid = applyColorOverlay(pixelGrid, petColor);
-        pixelGrid = applyExpression(pixelGrid, PetExpression.valueOf(expression));
-
-        return renderPixelGridToImage(pixelGrid);
-    }
-
-    private String getRandomSubclass() {
-        return PetService.SUBCLASSES[random.nextInt(PetService.SUBCLASSES.length)];
-    }
-
-    private String getRandomColor() {
-        return PetService.COLORS[random.nextInt(PetService.COLORS.length)];
-    }
-
-    private String getRandomExpression() {
-        PetExpression[] expressions = PetExpression.values();
-        return expressions[random.nextInt(expressions.length)].name();
-    }
-
-    /**
-     * Generate a pet sprite for a new user
-     */
+    /** Single-frame sprite for initial pet creation / evolution. */
     public BufferedImage generatePetSprite(Pet pet) {
-        log.debug("Generating sprite for pet: id={}, subclass={}, evolution={}",
-                pet.getId(), pet.getSubclass(), pet.getEvolutionPath());
+        long t0 = System.currentTimeMillis();
 
-        long startTime = System.currentTimeMillis();
-
-        int[][] pixelGrid = getSpeciesTemplate(pet.getSubclass());
-        log.trace("Species template generated for: {}", pet.getSubclass());
-
-        Color petColor = COLOR_PALETTE.getOrDefault(pet.getColorHex(), Color.GRAY);
-        pixelGrid = applyColorOverlay(pixelGrid, petColor);
-
-        pixelGrid = applyExpression(pixelGrid, pet.getExpression());
-
+        Palette pal = Palette.fromHex(pet.getColorHex());
+        PixelCanvas c = buildTemplate(pet.getSubclass());
+        applyExpression(c, pet.getExpression());
         if (pet.getEvolutionStage() > 1 && pet.getEvolutionPath() != null) {
-            log.debug("Applying evolution features: path={}, stage={}",
-                    pet.getEvolutionPath(), pet.getEvolutionStage());
-            pixelGrid = applyEvolutionFeatures(pixelGrid, pet.getEvolutionPath(), pet.getEvolutionStage());
+            applyEvolution(c, pet.getEvolutionPath(), pet.getEvolutionStage());
         }
+        addOutline(c);
+        BufferedImage img = render(c, pal);
 
-        BufferedImage result = renderPixelGridToImage(pixelGrid);
+        log.debug("Sprite generated in {}ms for pet {}", System.currentTimeMillis() - t0, pet.getId());
+        return img;
+    }
 
-        long duration = System.currentTimeMillis() - startTime;
-        log.debug("Sprite generated in {}ms for pet: {}", duration, pet.getId());
+    /** Random single-frame sprite. */
+    public BufferedImage generateRandomSprite() {
+        String subclass   = PetService.SUBCLASSES[RNG.nextInt(PetService.SUBCLASSES.length)];
+        String colorHex   = PetService.COLORS[RNG.nextInt(PetService.COLORS.length)];
+        PetExpression expr = PetExpression.values()[RNG.nextInt(PetExpression.values().length)];
 
-        return result;
+        Palette pal = Palette.fromHex(colorHex);
+        PixelCanvas c = buildTemplate(subclass);
+        applyExpression(c, expr);
+        addOutline(c);
+        return render(c, pal);
     }
 
     /**
-     * Get species template as 32x32 grid of color indices
+     * Generates a sprite sheet with idle + walk animation frames laid out
+     * in a single row: [idle0 idle1 idle2 idle3 walk0 walk1 walk2 walk3].
+     * Each frame is 32×32 native, output at 128×128 per cell.
+     * Total sheet: 8 frames × 128px = 1024×128.
      */
-    private int[][] getSpeciesTemplate(String subclass) {
-        switch (subclass.toLowerCase()) {
-            case "axolotl":
-                return getAxolotlTemplate();
-            case "cat":
-                return getCatTemplate();
-            case "dog":
-                return getDogTemplate();
-            case "fox":
-                return getFoxTemplate();
-            case "rabbit":
-                return getRabbitTemplate();
-            case "frog":
-                return getFrogTemplate();
-            case "penguin":
-                return getPenguinTemplate();
-            case "parrot":
-                return getParrotTemplate();
-            case "goldfish":
-                return getGoldfishTemplate();
-            case "snail":
-                return getSnailTemplate();
-            default:
-                log.warn("Unknown subclass '{}', using default template", subclass);
-                return getDefaultTemplate();
+    public BufferedImage generateSpriteSheet(Pet pet) {
+        Palette pal = Palette.fromHex(pet.getColorHex());
+        PixelCanvas base = buildTemplate(pet.getSubclass());
+        applyExpression(base, pet.getExpression());
+        if (pet.getEvolutionStage() > 1 && pet.getEvolutionPath() != null) {
+            applyEvolution(base, pet.getEvolutionPath(), pet.getEvolutionStage());
+        }
+
+        List<PixelCanvas> frames = new ArrayList<>(8);
+        frames.addAll(generateIdleFrames(base));
+        frames.addAll(generateWalkFrames(base));
+
+        int cols = frames.size();
+        BufferedImage sheet = new BufferedImage(OUTPUT * cols, OUTPUT, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = sheet.createGraphics();
+        disableSmoothing(g2);
+        g2.setBackground(new Color(0, 0, 0, 0));
+        g2.clearRect(0, 0, OUTPUT * cols, OUTPUT);
+
+        for (int i = 0; i < frames.size(); i++) {
+            PixelCanvas frame = frames.get(i);
+            addOutline(frame);
+            BufferedImage img = render(frame, pal);
+            g2.drawImage(img, i * OUTPUT, 0, null);
+        }
+        g2.dispose();
+        return sheet;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Palette
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Immutable 7-colour palette. Index 0 is always transparent.
+     * Every pixel in the sprite maps to exactly one of these entries.
+     */
+    private record Palette(Color outline, Color body, Color highlight,
+                           Color shadow, Color white, Color eye, Color detail) {
+
+        Color get(byte idx) {
+            return switch (idx) {
+                case _O -> outline;
+                case _B -> body;
+                case _H -> highlight;
+                case _S -> shadow;
+                case _W -> white;
+                case _E -> eye;
+                case _D -> detail;
+                default -> null;
+            };
+        }
+
+        static Palette fromHex(String hex) {
+            Color base = parseHex(hex);
+            return new Palette(
+                C_OUTLINE,
+                base,
+                lighter(base),
+                darker(base),
+                C_WHITE,
+                C_EYE,
+                C_DETAIL
+            );
+        }
+
+        private static Color lighter(Color c) {
+            return new Color(Math.min(255, c.getRed() + 40), Math.min(255, c.getGreen() + 40), Math.min(255, c.getBlue() + 40));
+        }
+
+        private static Color darker(Color c) {
+            return new Color(Math.max(0, c.getRed() - 45), Math.max(0, c.getGreen() - 45), Math.max(0, c.getBlue() - 45));
+        }
+
+        private static Color parseHex(String hex) {
+            String h = hex.startsWith("#") ? hex.substring(1) : hex;
+            return new Color(Integer.parseInt(h, 16));
         }
     }
 
-    private int[][] getAxolotlTemplate() {
-        int[][] template = new int[GRID_SIZE][GRID_SIZE];
+    // ═══════════════════════════════════════════════════════════════════
+    //  PixelCanvas — pixel-snapped drawing surface
+    // ═══════════════════════════════════════════════════════════════════
 
-        for (int y = 10; y < 26; y++) {
-            for (int x = 8; x < 24; x++) {
-                double dx = (x - 16) / 8.0;
-                double dy = (y - 18) / 6.0;
-                if (dx * dx + dy * dy <= 1.0) {
-                    template[y][x] = 1;
-                }
-            }
+    private static class PixelCanvas {
+        final byte[][] g = new byte[NATIVE][NATIVE];
+
+        PixelCanvas() {}
+
+        PixelCanvas(PixelCanvas src) {
+            for (int y = 0; y < NATIVE; y++) System.arraycopy(src.g[y], 0, g[y], 0, NATIVE);
         }
 
-        for (int y = 6; y < 16; y++) {
-            for (int x = 10; x < 22; x++) {
-                double dx = (x - 16) / 7.0;
-                double dy = (y - 11) / 5.0;
-                if (dx * dx + dy * dy <= 0.9) {
-                    template[y][x] = 1;
-                }
-            }
+        void set(int x, int y, byte v) {
+            if (x >= 0 && x < NATIVE && y >= 0 && y < NATIVE) g[y][x] = v;
         }
 
-        int[][] gillPositions = {{12, 6}, {14, 5}, {16, 5}, {18, 5}, {20, 6}};
-        for (int[] pos : gillPositions) {
-            for (int i = -1; i <= 1; i++) {
-                for (int j = -1; j <= 1; j++) {
-                    if (Math.abs(i) + Math.abs(j) <= 1) {
-                        int x = pos[0] + i;
-                        int y = pos[1] + j;
-                        if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
-                            template[y][x] = 2;
-                        }
+        byte get(int x, int y) {
+            return (x >= 0 && x < NATIVE && y >= 0 && y < NATIVE) ? g[y][x] : _T;
+        }
+
+        // ── pixel-snapped primitives ──
+
+        void fillRect(int x, int y, int w, int h, byte v) {
+            for (int py = y; py < y + h; py++)
+                for (int px = x; px < x + w; px++)
+                    set(px, py, v);
+        }
+
+        /** Pixel-snapped filled ellipse with integer radii. */
+        void fillEllipse(int cx, int cy, int rx, int ry, byte v) {
+            if (rx <= 0 || ry <= 0) return;
+            int rx2 = rx * rx, ry2 = ry * ry;
+            for (int py = cy - ry; py <= cy + ry; py++)
+                for (int px = cx - rx; px <= cx + rx; px++) {
+                    int dx = px - cx, dy = py - cy;
+                    if ((long) dx * dx * ry2 + (long) dy * dy * rx2 <= (long) rx2 * ry2)
+                        set(px, py, v);
+                }
+        }
+
+        /** Shift all non-transparent pixels by (dx, dy). Pixels moved off-canvas are lost. */
+        void shift(int dx, int dy) {
+            byte[][] copy = new byte[NATIVE][NATIVE];
+            for (int y = 0; y < NATIVE; y++)
+                for (int x = 0; x < NATIVE; x++)
+                    if (g[y][x] != _T) {
+                        int ny = y + dy, nx = x + dx;
+                        if (ny >= 0 && ny < NATIVE && nx >= 0 && nx < NATIVE)
+                            copy[ny][nx] = g[y][x];
                     }
-                }
-            }
+            for (int y = 0; y < NATIVE; y++) System.arraycopy(copy[y], 0, g[y], 0, NATIVE);
         }
-
-        return template;
     }
 
-    private int[][] getCatTemplate() {
-        int[][] template = new int[GRID_SIZE][GRID_SIZE];
+    // ═══════════════════════════════════════════════════════════════════
+    //  Outline pass
+    // ═══════════════════════════════════════════════════════════════════
 
-        for (int y = 12; y < 28; y++) {
-            for (int x = 8; x < 24; x++) {
-                double dx = (x - 16) / 8.0;
-                double dy = (y - 20) / 8.0;
-                if (dx * dx + dy * dy <= 0.9) {
-                    template[y][x] = 1;
-                }
+    /** Solid 1px dark outline around every non-transparent cluster (8-directional). */
+    private static void addOutline(PixelCanvas c) {
+        // First pass: record which cells are body (pre-outline)
+        boolean[][] body = new boolean[NATIVE][NATIVE];
+        for (int y = 0; y < NATIVE; y++)
+            for (int x = 0; x < NATIVE; x++)
+                body[y][x] = c.g[y][x] != _T && c.g[y][x] != _O;
+
+        // Second pass: place outline pixels in empty cells adjacent to body
+        for (int y = 0; y < NATIVE; y++)
+            for (int x = 0; x < NATIVE; x++) {
+                if (!body[y][x]) continue;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++) {
+                        if (dx == 0 && dy == 0) continue;
+                        int nx = x + dx, ny = y + dy;
+                        if (nx >= 0 && nx < NATIVE && ny >= 0 && ny < NATIVE && c.g[ny][nx] == _T)
+                            c.g[ny][nx] = _O;
+                    }
             }
-        }
-
-        for (int y = 4; y < 16; y++) {
-            for (int x = 10; x < 22; x++) {
-                double dx = (x - 16) / 7.0;
-                double dy = (y - 10) / 6.0;
-                if (dx * dx + dy * dy <= 0.85) {
-                    template[y][x] = 1;
-                }
-            }
-        }
-
-        template[2][12] = 1;
-        template[2][13] = 1;
-        template[3][11] = 1;
-        template[3][12] = 1;
-        template[2][19] = 1;
-        template[2][20] = 1;
-        template[3][20] = 1;
-        template[3][21] = 1;
-
-        return template;
     }
 
-    private int[][] getDogTemplate() {
-        int[][] template = new int[GRID_SIZE][GRID_SIZE];
+    // ═══════════════════════════════════════════════════════════════════
+    //  Render
+    // ═══════════════════════════════════════════════════════════════════
 
-        for (int y = 12; y < 26; y++) {
-            for (int x = 8; x < 24; x++) {
-                double dx = (x - 16) / 9.0;
-                double dy = (y - 19) / 7.0;
-                if (dx * dx + dy * dy <= 0.9) {
-                    template[y][x] = 1;
+    private static BufferedImage render(PixelCanvas c, Palette pal) {
+        BufferedImage img = new BufferedImage(OUTPUT, OUTPUT, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = img.createGraphics();
+        disableSmoothing(g2);
+        g2.setBackground(new Color(0, 0, 0, 0));
+        g2.clearRect(0, 0, OUTPUT, OUTPUT);
+
+        for (int y = 0; y < NATIVE; y++)
+            for (int x = 0; x < NATIVE; x++) {
+                Color color = pal.get(c.g[y][x]);
+                if (color != null) {
+                    g2.setColor(color);
+                    g2.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
+                }
+            }
+
+        g2.dispose();
+        return img;
+    }
+
+    private static void disableSmoothing(Graphics2D g2) {
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
+        g2.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_DISABLE);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Animation frames
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * 4-frame idle animation: subtle body bob (1-2px vertical shift).
+     * Frame 0: neutral, Frame 1: up 1px, Frame 2: neutral, Frame 3: down 1px.
+     */
+    static List<PixelCanvas> generateIdleFrames(PixelCanvas base) {
+        List<PixelCanvas> frames = new ArrayList<>(4);
+        int[] offsets = {0, -1, 0, 1};
+        for (int off : offsets) {
+            PixelCanvas f = new PixelCanvas(base);
+            f.shift(0, off);
+            frames.add(f);
+        }
+        return frames;
+    }
+
+    /**
+     * 4-frame walk cycle with alternating leg positions.
+     * Leg area (rows 23-29) is shifted left/right in opposite phases
+     * to simulate a walk. Body bounces slightly.
+     */
+    static List<PixelCanvas> generateWalkFrames(PixelCanvas base) {
+        List<PixelCanvas> frames = new ArrayList<>(4);
+
+        // Frame 0: neutral stance
+        frames.add(new PixelCanvas(base));
+
+        // Frame 1: left leg forward, slight body rise
+        PixelCanvas f1 = new PixelCanvas(base);
+        shiftRegion(f1, 23, 29, true, 1);   // right side down → shift right leg
+        f1.shift(0, -1);                     // body bounce up
+        frames.add(f1);
+
+        // Frame 2: neutral stance
+        frames.add(new PixelCanvas(base));
+
+        // Frame 3: right leg forward, slight body rise
+        PixelCanvas f3 = new PixelCanvas(base);
+        shiftRegion(f3, 23, 29, false, 1);  // left side down → shift left leg
+        f3.shift(0, -1);                     // body bounce up
+        frames.add(f3);
+
+        return frames;
+    }
+
+    /**
+     * Shifts pixels in a horizontal row range. When {@code rightSide} is true,
+     * only pixels at x >= 16 are shifted; otherwise pixels at x < 16 are shifted.
+     */
+    private static void shiftRegion(PixelCanvas c, int yStart, int yEnd, boolean rightSide, int dx) {
+        byte[][] orig = new byte[NATIVE][NATIVE];
+        for (int y = yStart; y <= yEnd; y++) System.arraycopy(c.g[y], 0, orig[y], 0, NATIVE);
+
+        for (int y = yStart; y <= yEnd; y++) {
+            for (int x = 0; x < NATIVE; x++) {
+                boolean match = rightSide ? (x >= 16) : (x < 16);
+                if (match && orig[y][x] != _T) {
+                    c.g[y][x] = _T;
+                    int nx = x + dx;
+                    if (nx >= 0 && nx < NATIVE) c.g[y][nx] = orig[y][x];
                 }
             }
         }
+    }
 
-        for (int y = 4; y < 16; y++) {
-            for (int x = 9; x < 23; x++) {
-                double dx = (x - 16) / 8.0;
-                double dy = (y - 10) / 6.0;
-                if (dx * dx + dy * dy <= 0.8) {
-                    template[y][x] = 1;
-                }
+    // ═══════════════════════════════════════════════════════════════════
+    //  Expression overlays
+    // ═══════════════════════════════════════════════════════════════════
+
+    private static void applyExpression(PixelCanvas c, PetExpression expr) {
+        switch (expr) {
+            case HAPPY -> {
+                // Curved-up dot eyes
+                c.set(12, 8, _W); c.set(13, 8, _E); c.set(14, 8, _W);
+                c.set(18, 8, _W); c.set(19, 8, _E); c.set(20, 8, _W);
+                // Smile — 1px line
+                for (int x = 14; x <= 18; x++) c.set(x, 13, _E);
+                // Blush
+                c.set(11, 10, _D); c.set(21, 10, _D);
+            }
+            case SAD -> {
+                c.set(12, 8, _W); c.set(13, 8, _E); c.set(13, 9, _E);
+                c.set(19, 8, _W); c.set(20, 8, _E); c.set(20, 9, _E);
+                // Frown
+                c.set(14, 13, _E); c.set(15, 12, _E); c.set(16, 12, _E); c.set(17, 12, _E); c.set(18, 13, _E);
+            }
+            case MAD -> {
+                // Angry brows
+                c.set(12, 7, _E); c.set(13, 7, _E);
+                c.set(19, 7, _E); c.set(20, 7, _E);
+                // Eyes
+                c.set(12, 8, _W); c.set(13, 8, _E);
+                c.set(19, 8, _W); c.set(20, 8, _E);
+                // Mouth
+                c.set(14, 12, _E); c.set(15, 12, _E); c.set(16, 12, _E); c.set(17, 12, _E); c.set(18, 12, _E);
+                c.set(15, 11, _E); c.set(17, 11, _E);
+            }
+            case SLEEPY -> {
+                // Closed/half-closed eyes
+                c.set(12, 8, _E); c.set(13, 8, _E); c.set(14, 8, _E);
+                c.set(18, 8, _E); c.set(19, 8, _E); c.set(20, 8, _E);
+                // Small mouth
+                c.set(15, 13, _E); c.set(16, 13, _E); c.set(17, 13, _E);
+                // Blush
+                c.set(11, 10, _D); c.set(21, 10, _D);
+            }
+            case CONFUSED -> {
+                // Uneven eyes
+                c.set(12, 8, _W); c.set(13, 8, _E);
+                c.set(19, 9, _W); c.set(20, 9, _E);
+                // Wobbly mouth
+                c.set(14, 12, _E); c.set(15, 13, _E); c.set(16, 12, _E); c.set(17, 13, _E);
+                // Question-like dot
+                c.set(19, 6, _E);
             }
         }
-
-        for (int i = 0; i < 5; i++) {
-            template[2 + i][9] = 1;
-            template[2 + i][22] = 1;
-        }
-
-        return template;
     }
 
-    private int[][] applyColorOverlay(int[][] grid, Color petColor) {
-        int[][] coloredGrid = new int[GRID_SIZE][GRID_SIZE];
+    // ═══════════════════════════════════════════════════════════════════
+    //  Evolution effects
+    // ═══════════════════════════════════════════════════════════════════
 
-        for (int y = 0; y < GRID_SIZE; y++) {
-            for (int x = 0; x < GRID_SIZE; x++) {
-                int value = grid[y][x];
-                if (value == 1) {
-                    coloredGrid[y][x] = encodeColor(petColor);
-                } else if (value == 2) {
-                    Color lighter = new Color(
-                            Math.min(255, petColor.getRed() + 30),
-                            Math.min(255, petColor.getGreen() + 30),
-                            Math.min(255, petColor.getBlue() + 30)
-                    );
-                    coloredGrid[y][x] = encodeColor(lighter);
-                } else {
-                    coloredGrid[y][x] = value;
-                }
-            }
-        }
-
-        return coloredGrid;
-    }
-
-    private int[][] applyExpression(int[][] grid, PetExpression expression) {
-        int[][] result = copyGrid(grid);
-
-        switch (expression) {
-            case HAPPY:
-                result[8][13] = encodeColor(Color.WHITE);
-                result[8][14] = encodeColor(Color.BLACK);
-                result[8][18] = encodeColor(Color.WHITE);
-                result[8][19] = encodeColor(Color.BLACK);
-                for (int x = 14; x <= 18; x++) {
-                    result[12][x] = encodeColor(Color.BLACK);
-                }
-                result[11][15] = encodeColor(Color.BLACK);
-                result[11][17] = encodeColor(Color.BLACK);
-                break;
-
-            case SAD:
-                result[8][13] = encodeColor(Color.WHITE);
-                result[9][14] = encodeColor(Color.BLACK);
-                result[8][18] = encodeColor(Color.WHITE);
-                result[9][19] = encodeColor(Color.BLACK);
-                result[12][14] = encodeColor(Color.BLACK);
-                result[12][18] = encodeColor(Color.BLACK);
-                result[11][15] = encodeColor(Color.BLACK);
-                result[11][17] = encodeColor(Color.BLACK);
-                break;
-
-            case MAD:
-                result[7][13] = encodeColor(Color.BLACK);
-                result[7][14] = encodeColor(Color.BLACK);
-                result[7][18] = encodeColor(Color.BLACK);
-                result[7][19] = encodeColor(Color.BLACK);
-                result[8][13] = encodeColor(Color.WHITE);
-                result[8][14] = encodeColor(Color.BLACK);
-                result[8][18] = encodeColor(Color.WHITE);
-                result[8][19] = encodeColor(Color.BLACK);
-                result[11][14] = encodeColor(Color.BLACK);
-                result[11][16] = encodeColor(Color.BLACK);
-                result[11][17] = encodeColor(Color.BLACK);
-                break;
-
-            case SLEEPY:
-                result[8][13] = encodeColor(Color.BLACK);
-                result[8][14] = encodeColor(Color.BLACK);
-                result[8][18] = encodeColor(Color.BLACK);
-                result[8][19] = encodeColor(Color.BLACK);
-                result[11][16] = encodeColor(Color.BLACK);
-                break;
-
-            case CONFUSED:
-                result[7][13] = encodeColor(Color.WHITE);
-                result[7][14] = encodeColor(Color.BLACK);
-                result[9][18] = encodeColor(Color.WHITE);
-                result[9][19] = encodeColor(Color.BLACK);
-                result[11][15] = encodeColor(Color.BLACK);
-                result[12][16] = encodeColor(Color.BLACK);
-                result[11][17] = encodeColor(Color.BLACK);
-                break;
-        }
-
-        return result;
-    }
-
-    private int[][] applyEvolutionFeatures(int[][] grid, EvolutionPath path, int stage) {
-        int[][] result = copyGrid(grid);
-
+    private static void applyEvolution(PixelCanvas c, EvolutionPath path, int stage) {
         switch (path) {
-            case PERFECT:
-                for (int y = 0; y < GRID_SIZE; y++) {
-                    for (int x = 0; x < GRID_SIZE; x++) {
-                        if (grid[y][x] != 0 && grid[y][x] != -1) {
-                            Color original = decodeColor(grid[y][x]);
-                            Color glowing = new Color(
-                                    Math.min(255, original.getRed() + 20 * stage),
-                                    Math.min(255, original.getGreen() + 20 * stage),
-                                    Math.min(255, original.getBlue() + 10 * stage)
-                            );
-                            result[y][x] = encodeColor(glowing);
-                        }
+            case PERFECT -> {
+                float chance = 0.07f * stage;
+                for (int y = 0; y < NATIVE; y++)
+                    for (int x = 0; x < NATIVE; x++) {
+                        byte v = c.g[y][x];
+                        if (v == _B && RNG.nextFloat() < chance) c.g[y][x] = _H;
+                        else if (v == _S && RNG.nextFloat() < chance) c.g[y][x] = _B;
                     }
-                }
-                break;
-
-            case OVERWEIGHT:
+            }
+            case WELL_RAISED -> {
+                for (int y = 0; y < NATIVE / 3; y++)
+                    for (int x = 0; x < NATIVE; x++)
+                        if (c.g[y][x] == _B) c.g[y][x] = _H;
+            }
+            case OVERWEIGHT -> {
                 if (stage >= 2) {
-                    for (int y = 0; y < GRID_SIZE; y++) {
-                        for (int x = 0; x < GRID_SIZE; x++) {
-                            if (grid[y][x] != 0 && grid[y][x] != -1) {
-                                for (int dy = -1; dy <= 1; dy++) {
-                                    for (int dx = -1; dx <= 1; dx++) {
-                                        int ny = y + dy;
-                                        int nx = x + dx;
-                                        if (ny >= 0 && ny < GRID_SIZE && nx >= 0 && nx < GRID_SIZE) {
-                                            if (result[ny][nx] == 0) {
-                                                result[ny][nx] = grid[y][x];
-                                            }
-                                        }
-                                    }
-                                }
+                    // Expand body horizontally by 1px on each side
+                    byte[][] orig = new byte[NATIVE][NATIVE];
+                    for (int y = 0; y < NATIVE; y++) System.arraycopy(c.g[y], 0, orig[y], 0, NATIVE);
+                    for (int y = 0; y < NATIVE; y++)
+                        for (int x = 0; x < NATIVE; x++) {
+                            byte v = orig[y][x];
+                            if (v == _B || v == _S || v == _H || v == _W) {
+                                c.set(x - 1, y, v);
+                                c.set(x + 1, y, v);
                             }
                         }
-                    }
                 }
-                break;
-
-            case NEGLECTED:
-                int patches = 10 * stage;
+            }
+            case NEGLECTED -> {
+                int patches = 6 + stage * 5;
                 for (int i = 0; i < patches; i++) {
-                    int x = 5 + random.nextInt(22);
-                    int y = 5 + random.nextInt(22);
-                    if (result[y][x] != 0) {
-                        result[y][x] = encodeColor(Color.DARK_GRAY);
+                    int px = 4 + RNG.nextInt(NATIVE - 8);
+                    int py = 4 + RNG.nextInt(NATIVE - 8);
+                    if (c.g[py][px] == _B || c.g[py][px] == _H) {
+                        c.g[py][px] = _S;
+                        if (px + 1 < NATIVE && c.g[py][px + 1] == _B) c.g[py][px + 1] = _S;
+                        if (py + 1 < NATIVE && c.g[py + 1][px] == _B) c.g[py + 1][px] = _S;
                     }
                 }
-                break;
-
-            default:
-                log.trace("No evolution features applied for path: {}", path);
-                break;
-        }
-
-        return result;
-    }
-
-    private BufferedImage renderPixelGridToImage(int[][] grid) {
-        BufferedImage image = new BufferedImage(SPRITE_SIZE, SPRITE_SIZE, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = image.createGraphics();
-
-        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-
-        for (int y = 0; y < GRID_SIZE; y++) {
-            for (int x = 0; x < GRID_SIZE; x++) {
-                int value = grid[y][x];
-                if (value != 0 && value != -1) {
-                    Color color = decodeColor(value);
-                    g2d.setColor(color);
-                    g2d.fillRect(x * PIXEL_SCALE, y * PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
-                }
             }
+            default -> {}
         }
-
-        // Retro grid lines
-        g2d.setColor(new Color(0, 0, 0, 30));
-        for (int i = 0; i <= SPRITE_SIZE; i += PIXEL_SCALE) {
-            g2d.drawLine(i, 0, i, SPRITE_SIZE);
-            g2d.drawLine(0, i, SPRITE_SIZE, i);
-        }
-
-        g2d.dispose();
-        return image;
     }
 
-    private int encodeColor(Color color) {
-        return (color.getRGB() & 0xFFFFFF) | 0xFF000000;
-    }
+    // ═══════════════════════════════════════════════════════════════════
+    //  Species templates — procedurally built with pixel-snapped primitives
+    // ═══════════════════════════════════════════════════════════════════
 
-    private Color decodeColor(int encoded) {
-        return new Color(encoded, true);
-    }
-
-    private int[][] copyGrid(int[][] original) {
-        int[][] copy = new int[GRID_SIZE][GRID_SIZE];
-        for (int i = 0; i < GRID_SIZE; i++) {
-            System.arraycopy(original[i], 0, copy[i], 0, GRID_SIZE);
-        }
-        return copy;
-    }
-
-    // Additional species templates
-    private int[][] getFoxTemplate() { return getCatTemplate(); }
-    private int[][] getRabbitTemplate() { return getCatTemplate(); }
-    private int[][] getFrogTemplate() { return getAxolotlTemplate(); }
-    private int[][] getPenguinTemplate() { return getDefaultTemplate(); }
-    private int[][] getParrotTemplate() { return getDefaultTemplate(); }
-    private int[][] getGoldfishTemplate() { return getDefaultTemplate(); }
-    private int[][] getSnailTemplate() { return getDefaultTemplate(); }
-
-    private int[][] getDefaultTemplate() {
-        int[][] template = new int[GRID_SIZE][GRID_SIZE];
-        for (int y = 8; y < 24; y++) {
-            for (int x = 8; x < 24; x++) {
-                double dx = (x - 16) / 8.0;
-                double dy = (y - 16) / 8.0;
-                if (dx * dx + dy * dy <= 0.9) {
-                    template[y][x] = 1;
-                }
+    private static PixelCanvas buildTemplate(String subclass) {
+        return switch (subclass.toLowerCase()) {
+            case "cat"     -> buildCat();
+            case "dog"     -> buildDog();
+            case "fox"     -> buildFox();
+            case "rabbit"  -> buildRabbit();
+            case "axolotl" -> buildAxolotl();
+            case "frog"    -> buildFrog();
+            case "penguin" -> buildPenguin();
+            case "parrot"  -> buildParrot();
+            default -> {
+                log.warn("Unknown subclass '{}', using cat template", subclass);
+                yield buildCat();
             }
-        }
-        return template;
+        };
+    }
+
+    // ── Cat: chunky body, large round head (~40% height), stubby legs, upright tail ──
+    private static PixelCanvas buildCat() {
+        PixelCanvas c = new PixelCanvas();
+
+        // Body — rounded rectangle
+        c.fillEllipse(16, 20, 7, 6, _B);   // main body
+        c.fillEllipse(16, 20, 6, 5, _B);   // fill centre
+        // Head — large circle, ~12px tall
+        c.fillEllipse(16, 10, 7, 6, _B);
+        c.fillEllipse(16, 10, 7, 5, _B);
+        // Ears — small triangles on top
+        c.fillRect(11, 3, 3, 3, _B);  // left ear
+        c.fillRect(18, 3, 3, 3, _B);  // right ear
+        c.set(12, 2, _B); c.set(19, 2, _B); // ear tips
+        // Inner ears
+        c.set(12, 4, _D); c.set(19, 4, _D);
+        // Head highlight
+        for (int x = 12; x <= 20; x++) { c.set(x, 6, _H); c.set(x, 7, _H); }
+        // White muzzle
+        c.fillEllipse(16, 12, 3, 2, _W);
+        // White belly/chest
+        c.fillEllipse(16, 20, 4, 4, _W);
+        // Eyes (placed by expression overlay)
+        // Legs — stubby, 2px wide
+        c.fillRect(12, 25, 2, 5, _B);  // left leg
+        c.fillRect(18, 25, 2, 5, _B);  // right leg
+        // Feet — slightly wider
+        c.set(11, 28, _B); c.set(13, 28, _B); c.set(12, 29, _B);
+        c.set(17, 28, _B); c.set(19, 28, _B); c.set(18, 29, _B);
+        // Tail — upright, slight curve
+        c.fillRect(24, 22, 2, 8, _B);
+        c.set(25, 22, _B); c.set(25, 21, _B); // curve tip
+
+        return c;
+    }
+
+    // ── Dog: broader body, floppy ears, wagging tail ──
+    private static PixelCanvas buildDog() {
+        PixelCanvas c = new PixelCanvas();
+        // Body — wider than cat
+        c.fillEllipse(16, 19, 8, 7, _B);
+        // Head
+        c.fillEllipse(16, 9, 7, 6, _B);
+        // Floppy ears (hanging down on sides)
+        c.fillRect(9, 6, 2, 6, _B);  // left ear
+        c.fillRect(21, 6, 2, 6, _B);  // right ear
+        // Head highlight
+        for (int x = 13; x <= 19; x++) c.set(x, 5, _H);
+        // Muzzle
+        c.fillEllipse(16, 11, 3, 2, _W);
+        // Chest/belly
+        c.fillEllipse(16, 19, 4, 5, _W);
+        // Legs — a bit longer than cat
+        c.fillRect(12, 25, 2, 5, _B);
+        c.fillRect(18, 25, 2, 5, _B);
+        c.fillRect(11, 29, 3, 1, _B); // paws
+        c.fillRect(18, 29, 3, 1, _B);
+        // Tail — wagging up-right
+        c.fillRect(24, 16, 2, 6, _B);
+        c.set(24, 15, _B);
+
+        return c;
+    }
+
+    // ── Fox: pointed ears, slender face, bushy tail ──
+    private static PixelCanvas buildFox() {
+        PixelCanvas c = new PixelCanvas();
+        // Body — slightly slender
+        c.fillEllipse(16, 19, 6, 7, _B);
+        // Head — wider at cheeks
+        c.fillEllipse(16, 9, 7, 5, _B);
+        // Pointed ears (taller triangles)
+        c.fillRect(11, 2, 2, 4, _B);  // left ear
+        c.fillRect(19, 2, 2, 4, _B);  // right ear
+        c.set(12, 1, _B); c.set(19, 1, _B); // tips
+        // Inner ears
+        c.set(12, 3, _D); c.set(19, 3, _D);
+        // Head highlight
+        for (int x = 13; x <= 19; x++) c.set(x, 5, _H);
+        // White cheeks/muzzle
+        c.fillEllipse(16, 11, 3, 2, _W);
+        // White chest
+        c.fillEllipse(16, 18, 3, 4, _W);
+        // Legs — slim
+        c.fillRect(12, 25, 2, 4, _B);
+        c.fillRect(18, 25, 2, 4, _B);
+        c.set(11, 29, _B); c.set(13, 29, _B);
+        c.set(18, 29, _B); c.set(20, 29, _B);
+        // Bushy tail — thick, sweeping right
+        c.fillEllipse(25, 24, 4, 3, _B);
+        c.fillRect(21, 22, 5, 4, _B);
+        // White tail tip
+        c.set(28, 24, _W); c.set(27, 23, _W); c.set(27, 25, _W);
+
+        return c;
+    }
+
+    // ── Rabbit: long ears, round body, fluffy tail ──
+    private static PixelCanvas buildRabbit() {
+        PixelCanvas c = new PixelCanvas();
+        // Body — round
+        c.fillEllipse(16, 19, 6, 6, _B);
+        // Head — round
+        c.fillEllipse(16, 10, 5, 5, _B);
+        // Long ears — 6px tall
+        c.fillRect(11, 0, 3, 7, _B);  // left ear
+        c.fillRect(18, 0, 3, 7, _B);  // right ear
+        // Inner ears
+        c.set(12, 1, _D); c.set(12, 2, _D); c.set(12, 3, _D);
+        c.set(19, 1, _D); c.set(19, 2, _D); c.set(19, 3, _D);
+        // Head highlight
+        for (int x = 12; x <= 20; x++) c.set(x, 6, _H);
+        // Muzzle / nose
+        c.fillEllipse(16, 11, 2, 2, _W);
+        c.set(16, 11, _D); // pink nose
+        // White belly
+        c.fillEllipse(16, 19, 4, 4, _W);
+        // Legs
+        c.fillRect(12, 24, 2, 5, _B);
+        c.fillRect(18, 24, 2, 5, _B);
+        c.fillRect(11, 28, 4, 1, _B); // big feet
+        c.fillRect(17, 28, 4, 1, _B);
+        // Fluffy tail — small white puff
+        c.fillEllipse(23, 25, 2, 2, _W);
+
+        return c;
+    }
+
+    // ── Axolotl: wide head, external gills, finned tail ──
+    private static PixelCanvas buildAxolotl() {
+        PixelCanvas c = new PixelCanvas();
+        // Body — elongated
+        c.fillEllipse(16, 19, 6, 7, _B);
+        // Head — wide
+        c.fillEllipse(16, 10, 8, 5, _B);
+        // External gills (side branches)
+        for (int y = 7; y <= 11; y++) { c.set(7, y, _D); c.set(25, y, _D); }
+        c.set(6, 8, _D); c.set(6, 10, _D); c.set(26, 8, _D); c.set(26, 10, _D);
+        // Head highlight
+        for (int x = 11; x <= 21; x++) c.set(x, 7, _H);
+        // White belly
+        c.fillEllipse(16, 19, 3, 5, _W);
+        // Tiny legs
+        c.fillRect(10, 24, 2, 3, _B);
+        c.fillRect(20, 24, 2, 3, _B);
+        c.set(10, 27, _B); c.set(11, 27, _B); c.set(20, 27, _B); c.set(21, 27, _B);
+        // Finned tail
+        c.fillEllipse(16, 27, 4, 3, _B);
+        c.fillEllipse(16, 29, 3, 2, _B);
+
+        return c;
+    }
+
+    // ── Frog: wide body, bulging eyes on top, no tail ──
+    private static PixelCanvas buildFrog() {
+        PixelCanvas c = new PixelCanvas();
+        // Body — wide oval
+        c.fillEllipse(16, 18, 9, 6, _B);
+        // Head — wide and flat
+        c.fillEllipse(16, 11, 8, 4, _B);
+        // Bulging eyes on top of head
+        c.fillEllipse(11, 7, 3, 3, _B);
+        c.fillEllipse(21, 7, 3, 3, _B);
+        // Pupils
+        c.fillRect(10, 7, 2, 2, _E);
+        c.fillRect(20, 7, 2, 2, _E);
+        // Highlight on top
+        for (int x = 11; x <= 21; x++) c.set(x, 9, _H);
+        // White belly
+        c.fillEllipse(16, 18, 4, 4, _W);
+        // Wide-set legs
+        c.fillRect(7, 22, 3, 3, _B);
+        c.fillRect(22, 22, 3, 3, _B);
+        c.fillRect(5, 24, 3, 2, _B);  // splayed feet
+        c.fillRect(24, 24, 3, 2, _B);
+
+        return c;
+    }
+
+    // ── Penguin: tall oval body, flippers, beak, white belly ──
+    private static PixelCanvas buildPenguin() {
+        PixelCanvas c = new PixelCanvas();
+        // Body — tall oval
+        c.fillEllipse(16, 16, 7, 10, _B);
+        // Head — continuous with body, slightly narrower
+        c.fillEllipse(16, 7, 6, 5, _B);
+        // White face/belly patch
+        c.fillEllipse(16, 5, 4, 3, _W);
+        c.fillEllipse(16, 14, 5, 8, _W);
+        // Beak
+        c.set(14, 7, _D); c.set(15, 7, _D); c.set(16, 7, _D); c.set(17, 7, _D);
+        c.set(15, 8, _D); c.set(16, 8, _D);
+        // Eyes
+        c.set(13, 5, _E); c.set(14, 5, _E); c.set(18, 5, _E); c.set(19, 5, _E);
+        // Flippers (side wings)
+        c.fillRect(8, 14, 2, 6, _B);
+        c.fillRect(22, 14, 2, 6, _B);
+        // Feet
+        c.fillRect(13, 27, 3, 2, _B);
+        c.fillRect(17, 27, 3, 2, _B);
+
+        return c;
+    }
+
+    // ── Parrot: crest, curved beak, wing detail, tail feathers ──
+    private static PixelCanvas buildParrot() {
+        PixelCanvas c = new PixelCanvas();
+        // Body
+        c.fillEllipse(16, 18, 6, 6, _B);
+        // Head
+        c.fillEllipse(16, 9, 5, 5, _B);
+        // Crest (top feathers)
+        c.fillRect(13, 2, 2, 4, _B);
+        c.set(14, 1, _B); c.set(15, 1, _B);
+        c.fillRect(17, 3, 2, 3, _B);
+        // Head highlight
+        for (int x = 13; x <= 19; x++) c.set(x, 6, _H);
+        // Curved beak
+        c.set(12, 8, _D); c.set(11, 9, _D); c.set(12, 9, _D);
+        // Belly
+        c.fillEllipse(16, 18, 3, 4, _W);
+        // Wing detail (right side)
+        c.fillEllipse(22, 17, 3, 4, _H);
+        // Legs
+        c.fillRect(14, 24, 2, 4, _B);
+        c.fillRect(18, 24, 2, 4, _B);
+        c.set(13, 28, _B); c.set(15, 28, _B); c.set(17, 28, _B); c.set(19, 28, _B);
+        // Tail feathers
+        c.fillRect(13, 26, 2, 5, _B);
+        c.fillRect(16, 25, 2, 6, _B);
+        c.fillRect(19, 26, 2, 5, _B);
+
+        return c;
     }
 }

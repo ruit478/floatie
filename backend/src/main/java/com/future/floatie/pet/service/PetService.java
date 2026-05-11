@@ -6,6 +6,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import com.future.floatie.entity.Pet;
 import com.future.floatie.entity.User;
+import com.future.floatie.pet.enums.AccessoryType;
 import com.future.floatie.pet.enums.EvolutionPath;
 import com.future.floatie.pet.enums.PetExpression;
 import com.future.floatie.pet.enums.LifeStage;
@@ -27,7 +28,14 @@ public class PetService {
     private static final Random random = new Random();
 
     public static final String[] SUBCLASSES = {"cat", "dog", "fox", "rabbit", "axolotl", "frog", "penguin", "parrot"};
-    public static final String[] COLORS = {"#FF6B9D", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"};
+    public static final String[] COLORS = {
+        "#FF8C69", "#D4A574", "#E87A6B", "#6BB56B", "#D4B84A",
+        "#F0C48C", "#B08A5C", "#E88080", "#7AB880", "#D4C08C"
+    };
+    public static final String[] ACCENT_COLORS = {
+        "#FF6B8A", "#4ECDC4", "#FFE66D", "#FF8C42", "#A855F7",
+        "#38BDF8", "#34D399", "#F472B6", "#FB923C", "#818CF8"
+    };
     private static final Map<String, String[]> SPECIES_NAMES = Map.of(
             "cat", new String[]{"Whiskers", "Luna", "Simba", "Mittens", "Shadow", "Cleo", "Felix", "Oliver"},
             "dog", new String[]{"Buddy", "Max", "Bella", "Charlie", "Rocky", "Daisy", "Cooper", "Lola"},
@@ -71,6 +79,11 @@ public class PetService {
             pet.setColorHex(colorHex);
             pet.setExpression(expression);
             pet.setLifeStage(LifeStage.EGG);
+
+            // Random accessory
+            AccessoryType[] accessoryTypes = AccessoryType.values();
+            pet.setAccessoryType(accessoryTypes[random.nextInt(accessoryTypes.length)]);
+            pet.setAccessoryColorHex(ACCENT_COLORS[random.nextInt(ACCENT_COLORS.length)]);
 
             // Initialize stats
             pet.setHunger(30 + random.nextInt(60));     // 30-89

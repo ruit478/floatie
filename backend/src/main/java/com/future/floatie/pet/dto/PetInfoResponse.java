@@ -1,5 +1,6 @@
 package com.future.floatie.pet.dto;
 
+import com.future.floatie.pet.enums.AccessoryType;
 import com.future.floatie.pet.enums.EvolutionPath;
 import com.future.floatie.pet.enums.LifeStage;
 import com.future.floatie.pet.enums.PetExpression;
@@ -13,6 +14,8 @@ public record PetInfoResponse(
         String subclass,
         String colorHex,
         PetExpression expression,
+        AccessoryType accessoryType,
+        String accessoryColorHex,
         String spriteBase64,
 
         // Stats
@@ -42,6 +45,8 @@ public record PetInfoResponse(
                 pet.getSubclass(),
                 pet.getColorHex(),
                 pet.getExpression(),
+                pet.getAccessoryType(),
+                pet.getAccessoryColorHex(),
                 spriteBase64,
                 pet.getHunger(),
                 pet.getHappiness(),
