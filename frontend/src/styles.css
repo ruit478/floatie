@@ -18,26 +18,42 @@
 
 body {
   margin: 0;
-  background: #0f0f1a;
-  color: #e0e0e0;
+  background: #fefec0;
+  color: #575934;
 }
 
 /* --------------------------------------------------------------------------
    Design Tokens
    -------------------------------------------------------------------------- */
 :root {
-  --color-primary:     #e94560;
-  --color-primary-dim: #a02040;
-  --color-primary-hover: #f05a75;
-  --color-accent:      #f5a623;
-  --color-bg:          #0a0a12;
-  --color-bg-mid:      #0f0f17;
-  --color-bg-input:    #1a1a2e;
-  --color-bg-focus:    #22223b;
-  --color-border:      #2a2a3e;
-  --color-text-muted:  #a0a0b0;
-  --color-text-dim:    #6a6a7e;
-  --color-placeholder: #4a4a5e;
+  --color-bg:          #fefec0;
+  --color-bg-mid:      #fff5d6;
+  --color-bg-input:    #fffef0;
+  --color-bg-focus:    #fffef5;
+  --color-bg-card:     #fffdf5;
+  --color-primary:     #c7795c;
+  --color-primary-dim: #a65a3e;
+  --color-primary-hover: #d98d6f;
+  --color-accent:      #c7ae6c;
+  --color-accent-dim:  #a08a4e;
+  --color-border:      #c7ae6c;
+  --color-border-light:#e0d5a8;
+  --color-text:        #575934;
+  --color-text-dark:   #161717;
+  --color-text-muted:  #959770;
+  --color-text-dim:    #b8b88a;
+  --color-placeholder: #c7c7a0;
+  --color-success:     #7b9e6b;
+  --color-danger:      #c0392b;
+  --color-danger-bg:   #fce4e4;
+  --color-sky-top:     #40c7e5;
+  --color-sky-mid:     #8dd8c8;
+  --color-ground:      #cad2ba;
+  --color-grass:       #bacd74;
+  --color-pink-card:   #ffcdf8;
+  --color-pink-light:  #ffe9f6;
+  --color-rose-bg:     #f6e2e3;
+  --color-lavender:    #c3b9d2;
   --font-pixel:        'Press Start 2P', monospace;
   --font-vt:           'VT323', monospace;
 }
@@ -46,15 +62,14 @@ body {
    Card
    -------------------------------------------------------------------------- */
 .pixel-card {
-  background: var(--color-bg);
-  border: 4px solid var(--color-primary);
+  background: var(--color-bg-card);
+  border: 4px solid var(--color-accent);
   padding: 2rem;
   max-width: 450px;
   width: 100%;
   image-rendering: pixelated;
-  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.4);
+  box-shadow: 6px 6px 0px rgba(87, 89, 52, 0.15);
   transition: transform 0.2s;
-  animation: slideUp 0.4s ease-out;
 }
 
 .pixel-card:hover {
@@ -72,25 +87,24 @@ body {
 .pixel-icon {
   font-size: 3rem;
   margin-bottom: 1rem;
-  filter: drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.3));
-  animation: bounce 2s infinite;
+  filter: drop-shadow(2px 2px 0px rgba(87, 89, 52, 0.15));
 }
 
 .pixel-title {
   font-family: var(--font-pixel);
   font-size: 1.8rem;
-  color: var(--color-accent);
+  color: var(--color-text-dark);
   margin-bottom: 1rem;
   letter-spacing: 2px;
-  text-shadow: 3px 3px 0px var(--color-primary);
+  text-shadow: 3px 3px 0px var(--color-accent);
 }
 
 .pixel-divider {
   width: 80px;
   height: 4px;
-  background: var(--color-primary);
+  background: var(--color-accent);
   margin: 1rem auto;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.3);
+  box-shadow: 2px 2px 0px rgba(87, 89, 52, 0.15);
 }
 
 .pixel-subtitle {
@@ -115,7 +129,7 @@ body {
 .pixel-label {
   font-family: var(--font-pixel);
   font-size: 0.7rem;
-  color: var(--color-accent);
+  color: var(--color-text);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -133,8 +147,8 @@ body {
   width: 100%;
   padding: 0.75rem;
   background: var(--color-bg-input);
-  border: 2px solid var(--color-border);
-  color: #e0e0e0;
+  border: 2px solid var(--color-border-light);
+  color: var(--color-text-dark);
   font-family: var(--font-vt);
   font-size: 1rem;
   transition: all 0.2s;
@@ -146,12 +160,12 @@ body {
   outline: none;
   border-color: var(--color-accent);
   background: var(--color-bg-focus);
-  box-shadow: inset 2px 2px 0px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 2px 2px 0px rgba(199, 174, 108, 0.15);
 }
 
 .pixel-input.error {
-  border-color: var(--color-primary);
-  background: #2a1a22;
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 
 .pixel-input::placeholder {
@@ -179,9 +193,9 @@ body {
 
 .pixel-button-primary {
   background: var(--color-primary);
-  color: white;
+  color: #fffef5;
   border-bottom: 4px solid var(--color-primary-dim);
-  box-shadow: 0px 2px 0px rgba(0, 0, 0, 0.2);
+  box-shadow: 0px 2px 0px rgba(87, 89, 52, 0.15);
 }
 
 .pixel-button-primary:hover:not(:disabled) {
@@ -216,11 +230,11 @@ body {
   text-align: center;
   margin: 0.5rem 0;
   padding: 0.75rem;
-  background: rgba(233, 69, 96, 0.1);
-  border: 2px solid var(--color-primary);
+  background: var(--color-danger-bg);
+  border: 2px solid var(--color-danger);
   font-family: var(--font-vt);
   font-size: 0.9rem;
-  color: var(--color-primary);
+  color: var(--color-danger);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -233,13 +247,25 @@ body {
 }
 
 /* --------------------------------------------------------------------------
+   Optional badge (register email field)
+   -------------------------------------------------------------------------- */
+.optional-badge {
+  font-family: var(--font-vt);
+  font-size: 0.6rem;
+  color: var(--color-text-dim);
+  background: var(--color-bg-mid);
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--color-border-light);
+}
+
+/* --------------------------------------------------------------------------
    Footer Links
    -------------------------------------------------------------------------- */
 .pixel-footer {
   text-align: center;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 2px solid var(--color-border);
+  border-top: 2px solid var(--color-border-light);
   font-family: var(--font-vt);
   font-size: 0.9rem;
   color: var(--color-text-muted);
@@ -250,7 +276,7 @@ body {
 }
 
 .pixel-link {
-  color: var(--color-accent);
+  color: var(--color-primary);
   text-decoration: none;
   font-family: var(--font-pixel);
   font-size: 0.7rem;
@@ -259,8 +285,22 @@ body {
 }
 
 .pixel-link:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-hover);
   transform: translateX(2px);
+}
+
+/* --------------------------------------------------------------------------
+   sr-only utility
+   -------------------------------------------------------------------------- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -269,8 +309,21 @@ body {
 .pixel-button:focus-visible,
 .pixel-input:focus-visible,
 .pixel-link:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-text);
   outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .pixel-button-primary:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .pixel-button-primary:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 /* --------------------------------------------------------------------------

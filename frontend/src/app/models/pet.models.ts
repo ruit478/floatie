@@ -5,6 +5,8 @@ export interface PetInfo {
   subclass: string;
   colorHex: string;
   expression: string;
+  accessoryType: string;
+  accessoryColorHex: string;
   spriteBase64: string;
   hunger: number;
   happiness: number;

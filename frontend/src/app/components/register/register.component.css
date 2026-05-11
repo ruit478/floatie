@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+  background: linear-gradient(160deg, #f6e2e3 0%, #eed5d8 30%, #e6ccd0 60%, #c3b9d2 100%);
   padding: 1rem;
   position: relative;
   overflow-y: auto;
@@ -16,14 +16,14 @@
   overflow-y: auto;
 }
 
-.pixel-card::-webkit-scrollbar { width: 8px; background: #1a1a2e; }
-.pixel-card::-webkit-scrollbar-thumb { background: #e94560; border: 1px solid #2a2a3e; }
+.pixel-card::-webkit-scrollbar { width: 8px; background: var(--color-bg-mid); }
+.pixel-card::-webkit-scrollbar-thumb { background: var(--color-accent); border: 1px solid var(--color-border-light); }
 
 .info-text {
   font-size: 0.7rem;
-  color: #6a6a7e;
+  color: var(--color-text-muted);
   margin-top: 0.5rem;
   padding: 0.5rem;
-  background: #0f0f17;
-  border: 1px solid #2a2a3e;
+  background: var(--color-bg-mid);
+  border: 1px solid var(--color-border-light);
 }
