@@ -324,6 +324,14 @@ body {
   .pixel-button-primary:active:not(:disabled) {
     transform: none;
   }
+
+  .pixel-icon {
+    animation: none !important;
+  }
+
+  .stat-bar-fill.critical {
+    animation: none !important;
+  }
 }
 
 /* --------------------------------------------------------------------------

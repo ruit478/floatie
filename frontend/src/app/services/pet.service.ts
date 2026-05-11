@@ -11,11 +11,43 @@ export class PetService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/api/v1/pet`;
 
-  /**
-   * Fetch the authenticated user's pet info, including the sprite as a
-   * Base64-encoded PNG string.
-   */
   getPetInfo(): Observable<PetInfo> {
-    return this.http.get<PetInfo>(`${this.baseUrl}/sprite/info`);
+    return this.http.get<PetInfo>(`${this.baseUrl}/info`);
+  }
+
+  getStatus(): Observable<PetInfo> {
+    return this.http.get<PetInfo>(`${this.baseUrl}/status`);
+  }
+
+  feed(): Observable<PetInfo> {
+    return this.http.post<PetInfo>(`${this.baseUrl}/feed`, {});
+  }
+
+  play(): Observable<PetInfo> {
+    return this.http.post<PetInfo>(`${this.baseUrl}/play`, {});
+  }
+
+  rest(): Observable<PetInfo> {
+    return this.http.post<PetInfo>(`${this.baseUrl}/rest`, {});
+  }
+
+  clean(): Observable<PetInfo> {
+    return this.http.post<PetInfo>(`${this.baseUrl}/clean`, {});
+  }
+
+  heal(): Observable<PetInfo> {
+    return this.http.post<PetInfo>(`${this.baseUrl}/heal`, {});
+  }
+
+  sleep(): Observable<PetInfo> {
+    return this.http.post<PetInfo>(`${this.baseUrl}/sleep`, {});
+  }
+
+  wake(): Observable<PetInfo> {
+    return this.http.post<PetInfo>(`${this.baseUrl}/wake`, {});
+  }
+
+  replacePet(): Observable<PetInfo> {
+    return this.http.post<PetInfo>(`${this.baseUrl}/replace`, {});
   }
 }

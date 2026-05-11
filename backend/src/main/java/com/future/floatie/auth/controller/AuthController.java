@@ -7,6 +7,7 @@ import com.future.floatie.entity.User;
 import com.future.floatie.pet.service.PetService;
 import com.future.floatie.repository.UserRepository;
 import jakarta.validation.Valid;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,7 +50,7 @@ public class AuthController {
             log.warn("Registration failed - username already taken: '{}'", request.username());
             return ResponseEntity
                     .badRequest()
-                    .body(new AuthResponse(null, null, "Username is already taken"));
+                    .body(Map.of("message", "Username is already taken"));
         }
 
         User user = new User();
@@ -103,7 +104,7 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(new AuthResponse(null, null, "Invalid username or password"));
+                    .body(Map.of("message", "Invalid username or password"));
         }
     }
 }

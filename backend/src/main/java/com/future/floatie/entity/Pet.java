@@ -118,6 +118,10 @@ public class Pet {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "last_interaction_at")
+    @Setter
+    private LocalDateTime lastInteractionAt;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

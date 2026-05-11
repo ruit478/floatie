@@ -1,5 +1,7 @@
 <div class="game-container">
 
+  <app-toast></app-toast>
+
   <header class="game-header">
     <span class="pixel-text">{{ username() }}</span>
     <button (click)="logout()" class="logout-btn">LOGOUT</button>
@@ -16,6 +18,7 @@
     @else if (error()) {
       <div class="pet-card error-card">
         <p>{{ error() }}</p>
+        <button (click)="loadPet()" class="retry-btn">RETRY</button>
       </div>
     }
 
@@ -29,10 +32,12 @@
             class="pet-sprite"
           />
           <div class="pet-meta">
-            <h2 class="pet-name">{{ pet.name}}</h2>
+            <h2 class="pet-name">{{ pet.name }}</h2>
             <span class="pet-species">{{ pet.subclass }} · {{ pet.lifeStage }}</span>
             <span class="pet-level">Lv. {{ pet.level }} · {{ pet.xp }} XP</span>
-            @if (pet.isAsleep) {
+            @if (pet.lifeStage === 'DEAD') {
+              <span class="status-badge dead">💀 Deceased</span>
+            } @else if (pet.isAsleep) {
               <span class="status-badge asleep">💤 Asleep</span>
             }
           </div>
@@ -60,8 +65,83 @@
           <span>Age: {{ pet.ageDays }}d</span>
         </div>
 
+        <!-- ── Action buttons ── -->
+        <div class="actions-grid">
+          <button
+            class="action-btn"
+            (click)="feed()"
+            [disabled]="!canFeed()"
+            [title]="pet.isAsleep ? 'Pet is asleep' : pet.hunger >= 100 ? 'Already full' : ''"
+            [class.active-action]="actionInProgress() === 'feed'"
+          >
+            <span class="action-icon">🍖</span>
+            <span class="action-label">Feed</span>
+          </button>
+
+          <button
+            class="action-btn"
+            (click)="play()"
+            [disabled]="!canPlay()"
+            [title]="pet.isAsleep ? 'Pet is asleep' : pet.energy <= 0 ? 'No energy' : ''"
+            [class.active-action]="actionInProgress() === 'play'"
+          >
+            <span class="action-icon">🎾</span>
+            <span class="action-label">Play</span>
+          </button>
+
+          <button
+            class="action-btn"
+            (click)="rest()"
+            [disabled]="!canRest()"
+            [title]="pet.energy >= 100 ? 'Fully rested' : ''"
+            [class.active-action]="actionInProgress() === 'rest'"
+          >
+            <span class="action-icon">😴</span>
+            <span class="action-label">Rest</span>
+          </button>
+
+          <button
+            class="action-btn"
+            (click)="clean()"
+            [disabled]="!canClean()"
+            [title]="pet.hygiene >= 100 ? 'Already clean' : ''"
+            [class.active-action]="actionInProgress() === 'clean'"
+          >
+            <span class="action-icon">🚿</span>
+            <span class="action-label">Clean</span>
+          </button>
+
+          <button
+            class="action-btn"
+            (click)="heal()"
+            [disabled]="!canHeal()"
+            [title]="pet.health >= 100 ? 'Fully healthy' : ''"
+            [class.active-action]="actionInProgress() === 'heal'"
+          >
+            <span class="action-icon">💊</span>
+            <span class="action-label">Heal</span>
+          </button>
+
+          <button
+            class="action-btn"
+            (click)="toggleSleep()"
+            [disabled]="isBusy() || isDead()"
+            [class.active-action]="actionInProgress() === 'sleep' || actionInProgress() === 'wake'"
+          >
+            <span class="action-icon">{{ pet.isAsleep ? '⏰' : '💤' }}</span>
+            <span class="action-label">{{ pet.isAsleep ? 'Wake' : 'Sleep' }}</span>
+          </button>
+        </div>
+
       </div>
     }
 
   </main>
+
+  @if (pet()?.lifeStage === 'DEAD') {
+    <app-death-modal
+      (replace)="replacePet()"
+      (deleteAccount)="deleteAccount()"
+    ></app-death-modal>
+  }
 </div>

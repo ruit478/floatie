@@ -1,14 +1,11 @@
 package com.future.floatie.pet.controller;
 
-import com.future.floatie.pet.dto.PetInfoResponse;
-import com.future.floatie.pet.service.PetService;
 import com.future.floatie.pet.service.PixelArtService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import javax.imageio.ImageIO;
@@ -20,20 +17,10 @@ import java.io.ByteArrayOutputStream;
 @RequestMapping("/api/v1/pet/sprite")
 public class SpriteController {
 
-    private final PetService petService;
     private final PixelArtService pixelArtService;
 
-    public SpriteController(PetService petService, PixelArtService pixelArtService) {
-        this.petService = petService;
+    public SpriteController(PixelArtService pixelArtService) {
         this.pixelArtService = pixelArtService;
-    }
-
-    @GetMapping("/info")
-    public ResponseEntity<PetInfoResponse> getPetInfo(Authentication authentication) {
-
-        return petService.getPetInfo(authentication.getName())
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/generate")

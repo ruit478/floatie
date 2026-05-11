@@ -2,6 +2,8 @@ package com.future.floatie.pet.service;
 
 import com.future.floatie.entity.Pet;
 import com.future.floatie.pet.enums.EvolutionPath;
+import com.future.floatie.pet.PetConstants;
+import com.future.floatie.pet.enums.LifeStage;
 import com.future.floatie.pet.enums.PetExpression;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -58,6 +60,7 @@ public class PixelArtService {
         Palette pal = Palette.fromHex(pet.getColorHex());
         PixelCanvas c = buildTemplate(pet.getSubclass());
         applyExpression(c, pet.getExpression());
+        applyLifeStage(c, pet.getLifeStage());
         if (pet.getEvolutionStage() > 1 && pet.getEvolutionPath() != null) {
             applyEvolution(c, pet.getEvolutionPath(), pet.getEvolutionStage());
         }
@@ -70,50 +73,17 @@ public class PixelArtService {
 
     /** Random single-frame sprite. */
     public BufferedImage generateRandomSprite() {
-        String subclass   = PetService.SUBCLASSES[RNG.nextInt(PetService.SUBCLASSES.length)];
-        String colorHex   = PetService.COLORS[RNG.nextInt(PetService.COLORS.length)];
+        String subclass   = PetConstants.SUBCLASSES[RNG.nextInt(PetConstants.SUBCLASSES.length)];
+        String colorHex   = PetConstants.COLORS[RNG.nextInt(PetConstants.COLORS.length)];
         PetExpression expr = PetExpression.values()[RNG.nextInt(PetExpression.values().length)];
+
+        log.debug("Generating random sprite: subclass={}, color={}, expression={}", subclass, colorHex, expr);
 
         Palette pal = Palette.fromHex(colorHex);
         PixelCanvas c = buildTemplate(subclass);
         applyExpression(c, expr);
         addOutline(c);
         return render(c, pal);
-    }
-
-    /**
-     * Generates a sprite sheet with idle + walk animation frames laid out
-     * in a single row: [idle0 idle1 idle2 idle3 walk0 walk1 walk2 walk3].
-     * Each frame is 32×32 native, output at 128×128 per cell.
-     * Total sheet: 8 frames × 128px = 1024×128.
-     */
-    public BufferedImage generateSpriteSheet(Pet pet) {
-        Palette pal = Palette.fromHex(pet.getColorHex());
-        PixelCanvas base = buildTemplate(pet.getSubclass());
-        applyExpression(base, pet.getExpression());
-        if (pet.getEvolutionStage() > 1 && pet.getEvolutionPath() != null) {
-            applyEvolution(base, pet.getEvolutionPath(), pet.getEvolutionStage());
-        }
-
-        List<PixelCanvas> frames = new ArrayList<>(8);
-        frames.addAll(generateIdleFrames(base));
-        frames.addAll(generateWalkFrames(base));
-
-        int cols = frames.size();
-        BufferedImage sheet = new BufferedImage(OUTPUT * cols, OUTPUT, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = sheet.createGraphics();
-        disableSmoothing(g2);
-        g2.setBackground(new Color(0, 0, 0, 0));
-        g2.clearRect(0, 0, OUTPUT * cols, OUTPUT);
-
-        for (int i = 0; i < frames.size(); i++) {
-            PixelCanvas frame = frames.get(i);
-            addOutline(frame);
-            BufferedImage img = render(frame, pal);
-            g2.drawImage(img, i * OUTPUT, 0, null);
-        }
-        g2.dispose();
-        return sheet;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -299,55 +269,6 @@ public class PixelArtService {
         return frames;
     }
 
-    /**
-     * 4-frame walk cycle with alternating leg positions.
-     * Leg area (rows 23-29) is shifted left/right in opposite phases
-     * to simulate a walk. Body bounces slightly.
-     */
-    static List<PixelCanvas> generateWalkFrames(PixelCanvas base) {
-        List<PixelCanvas> frames = new ArrayList<>(4);
-
-        // Frame 0: neutral stance
-        frames.add(new PixelCanvas(base));
-
-        // Frame 1: left leg forward, slight body rise
-        PixelCanvas f1 = new PixelCanvas(base);
-        shiftRegion(f1, 23, 29, true, 1);   // right side down → shift right leg
-        f1.shift(0, -1);                     // body bounce up
-        frames.add(f1);
-
-        // Frame 2: neutral stance
-        frames.add(new PixelCanvas(base));
-
-        // Frame 3: right leg forward, slight body rise
-        PixelCanvas f3 = new PixelCanvas(base);
-        shiftRegion(f3, 23, 29, false, 1);  // left side down → shift left leg
-        f3.shift(0, -1);                     // body bounce up
-        frames.add(f3);
-
-        return frames;
-    }
-
-    /**
-     * Shifts pixels in a horizontal row range. When {@code rightSide} is true,
-     * only pixels at x >= 16 are shifted; otherwise pixels at x < 16 are shifted.
-     */
-    private static void shiftRegion(PixelCanvas c, int yStart, int yEnd, boolean rightSide, int dx) {
-        byte[][] orig = new byte[NATIVE][NATIVE];
-        for (int y = yStart; y <= yEnd; y++) System.arraycopy(c.g[y], 0, orig[y], 0, NATIVE);
-
-        for (int y = yStart; y <= yEnd; y++) {
-            for (int x = 0; x < NATIVE; x++) {
-                boolean match = rightSide ? (x >= 16) : (x < 16);
-                if (match && orig[y][x] != _T) {
-                    c.g[y][x] = _T;
-                    int nx = x + dx;
-                    if (nx >= 0 && nx < NATIVE) c.g[y][nx] = orig[y][x];
-                }
-            }
-        }
-    }
-
     // ═══════════════════════════════════════════════════════════════════
     //  Expression overlays
     // ═══════════════════════════════════════════════════════════════════
@@ -402,25 +323,94 @@ public class PixelArtService {
     }
 
     // ═══════════════════════════════════════════════════════════════════
+    //  Life-stage growth
+    // ═══════════════════════════════════════════════════════════════════
+
+    private static void applyLifeStage(PixelCanvas c, LifeStage stage) {
+        switch (stage) {
+            case EGG -> drawEgg(c);
+            case BABY -> cropBody(c, 0.55f);
+            case CHILD -> cropBody(c, 0.72f);
+            case TEEN -> cropBody(c, 0.88f);
+            case ELDER -> ageBody(c);
+            default -> {} // ADULT — full size, no change
+        }
+    }
+
+    /** Replace the entire canvas with a simple egg shape in body colour. */
+    private static void drawEgg(PixelCanvas c) {
+        // Clear canvas
+        for (int y = 0; y < NATIVE; y++)
+            for (int x = 0; x < NATIVE; x++)
+                c.g[y][x] = _T;
+
+        // Egg ellipse — taller than wide, centred
+        int cx = 16, cy = 16, rx = 8, ry = 12;
+        for (int y = cy - ry; y <= cy + ry; y++)
+            for (int x = cx - rx; x <= cx + rx; x++) {
+                int dx = x - cx, dy = y - cy;
+                if ((long) dx * dx * ry * ry + (long) dy * dy * rx * rx <= (long) rx * rx * ry * ry) {
+                    byte v = _B;
+                    if (dy < -ry / 2) v = _H;           // top highlight
+                    else if (dy > ry / 3) v = _S;       // bottom shadow
+                    c.set(x, y, v);
+                }
+            }
+
+        // Subtle crack lines
+        c.set(cx - 1, cy - 2, _O);
+        c.set(cx, cy - 2, _O);
+        c.set(cx + 1, cy - 1, _O);
+        c.set(cx, cy + 1, _O);
+        c.set(cx - 1, cy + 2, _O);
+        c.set(cx - 2, cy + 1, _O);
+    }
+
+    /**
+     * Trim the body from the bottom to the given height ratio.
+     * No vertical shift — the head stays in place, the body simply gets shorter.
+     * BABY=0.55  CHILD=0.72  TEEN=0.88  ADULT=1.0 (no-op).
+     */
+    private static void cropBody(PixelCanvas c, float keepRatio) {
+        int minY = NATIVE, maxY = 0;
+        for (int y = 0; y < NATIVE; y++)
+            for (int x = 0; x < NATIVE; x++)
+                if (c.g[y][x] != _T) {
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+
+        if (maxY <= minY) return;
+
+        int bodyHeight = maxY - minY + 1;
+        int cutoff = minY + Math.round(bodyHeight * keepRatio);
+
+        // Clear everything below the cutoff
+        for (int y = cutoff; y < NATIVE; y++)
+            for (int x = 0; x < NATIVE; x++)
+                c.g[y][x] = _T;
+    }
+
+    /** Age the body: random light patches suggest graying / elder appearance. */
+    private static void ageBody(PixelCanvas c) {
+        int count = 0;
+        for (int y = 0; y < NATIVE && count < 40; y++)
+            for (int x = 0; x < NATIVE && count < 40; x++) {
+                if ((c.g[y][x] == _B || c.g[y][x] == _S) && RNG.nextFloat() < 0.25f) {
+                    c.g[y][x] = RNG.nextBoolean() ? _W : _H;
+                    count++;
+                }
+            }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     //  Evolution effects
     // ═══════════════════════════════════════════════════════════════════
 
     private static void applyEvolution(PixelCanvas c, EvolutionPath path, int stage) {
         switch (path) {
-            case PERFECT -> {
-                float chance = 0.07f * stage;
-                for (int y = 0; y < NATIVE; y++)
-                    for (int x = 0; x < NATIVE; x++) {
-                        byte v = c.g[y][x];
-                        if (v == _B && RNG.nextFloat() < chance) c.g[y][x] = _H;
-                        else if (v == _S && RNG.nextFloat() < chance) c.g[y][x] = _B;
-                    }
-            }
-            case WELL_RAISED -> {
-                for (int y = 0; y < NATIVE / 3; y++)
-                    for (int x = 0; x < NATIVE; x++)
-                        if (c.g[y][x] == _B) c.g[y][x] = _H;
-            }
+            case PERFECT -> {}
+            case WELL_RAISED -> {}
             case OVERWEIGHT -> {
                 if (stage >= 2) {
                     // Expand body horizontally by 1px on each side

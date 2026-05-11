@@ -54,6 +54,17 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  deleteAccount(): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/api/v1/account`).pipe(
+      tap(() => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('username');
+        this.currentUserSubject.next(null);
+        this.router.navigate(['/login']);
+      })
+    );
+  }
+
   private handleAuthResponse(response: AuthResponse): void {
     // Store token and username from backend response
     localStorage.setItem('access_token', response.token);

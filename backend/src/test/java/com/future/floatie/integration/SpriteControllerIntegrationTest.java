@@ -16,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.http.HttpHeaders;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -143,6 +145,30 @@ class SpriteControllerIntegrationTest extends IntegrationTestBase {
             String idB = objectMapper.readTree(bodyB).get("id").asText();
 
             org.assertj.core.api.Assertions.assertThat(idA).isNotEqualTo(idB);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /api/v1/pet/sprite/generate
+    // -------------------------------------------------------------------------
+
+    @Nested
+    class GenerateSprite {
+
+        @Test
+        void happyPath_returnsPngImage() throws Exception {
+            String token = registerAndGetToken("genuser", "gen@example.com");
+
+            mockMvc.perform(post("/api/v1/pet/sprite/generate")
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE));
+        }
+
+        @Test
+        void unauthenticated_returnsForbidden() throws Exception {
+            mockMvc.perform(post("/api/v1/pet/sprite/generate"))
+                    .andExpect(status().isForbidden());
         }
     }
 }
