@@ -7,6 +7,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * REST controller for pet interactions. All endpoints require authentication
+ * (the username is extracted from the JWT via {@code Authentication}).
+ * Every endpoint delegates to {@link PetService}, which applies decay before
+ * each action and returns the updated pet state as a {@link PetInfoResponse}.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/pet")

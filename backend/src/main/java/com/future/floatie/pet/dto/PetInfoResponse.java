@@ -8,6 +8,14 @@ import com.future.floatie.entity.Pet;
 
 import java.util.UUID;
 
+/**
+ * Full pet state sent to the frontend. The {@code spriteBase64} field
+ * contains the PNG encoded as a Base64 data URI string — decoded and
+ * displayed directly in the game component.
+ *
+ * <p>{@link #from(Pet, String)} maps every entity field explicitly so
+ * the response shape is stable even if the entity gains internal columns.
+ */
 public record PetInfoResponse(
         UUID id,
         String name,

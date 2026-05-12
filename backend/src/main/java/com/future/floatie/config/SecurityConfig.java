@@ -20,6 +20,27 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Spring Security configuration for a stateless JWT-based REST API.
+ *
+ * <h3>Key decisions</h3>
+ * <ul>
+ *   <li>CSRF is disabled — the API is consumed by a browser SPA with
+ *       Authorization headers, not cookies.</li>
+ *   <li>Session management is STATELESS — every request must carry a
+ *       valid JWT (except the four public paths below).</li>
+ *   <li>BCrypt strength 12 — balances security with registration latency.</li>
+ *   <li>The {@link JwtAuthenticationFilter} runs before Spring's default
+ *       {@code UsernamePasswordAuthenticationFilter}.</li>
+ * </ul>
+ *
+ * <h3>Public paths (no authentication required)</h3>
+ * {@code /auth/register}, {@code /auth/login},
+ * {@code /actuator/health}, {@code /api/v1/pet/sprite/generate}
+ *
+ * <p>The filter itself also skips {@code /auth/*} (except account deletion)
+ * in {@link JwtAuthenticationFilter#shouldNotFilter}.
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {

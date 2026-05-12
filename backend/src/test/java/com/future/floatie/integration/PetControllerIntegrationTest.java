@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.*;
@@ -19,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@DirtiesContext
 class PetControllerIntegrationTest extends IntegrationTestBase {
 
     @Autowired MockMvc mockMvc;
@@ -53,7 +55,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class GetInfo {
 
         @Test
-        void returnsFullPetPayload() throws Exception {
+        void shouldReturnFullPetPayloadWhenAuthenticated() throws Exception {
             String token = registerAndGetToken("infouser", "info@example.com");
 
             mockMvc.perform(get("/api/v1/pet/info")
@@ -68,12 +70,12 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
                     .andExpect(jsonPath("$.level").value(1))
                     .andExpect(jsonPath("$.xp").value(0))
                     .andExpect(jsonPath("$.evolutionStage").value(1))
-                    .andExpect(jsonPath("$.asleep").value(false))
+                    .andExpect(jsonPath("$.isAsleep").value(false))
                     .andExpect(jsonPath("$.bondLevel").value(0));
         }
 
         @Test
-        void spriteBase64IsPresent() throws Exception {
+        void shouldIncludeSpriteBase64WhenFetchingPetInfo() throws Exception {
             String token = registerAndGetToken("spriteuser", "sprite@example.com");
 
             mockMvc.perform(get("/api/v1/pet/info")
@@ -83,7 +85,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void statsAreWithinExpectedRange() throws Exception {
+        void shouldReturnStatsWithinRangeWhenPetIsNew() throws Exception {
             String token = registerAndGetToken("rangeuser", "range@example.com");
 
             mockMvc.perform(get("/api/v1/pet/info")
@@ -97,20 +99,20 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenNotAuthenticated() throws Exception {
             mockMvc.perform(get("/api/v1/pet/info"))
                     .andExpect(status().isForbidden());
         }
 
         @Test
-        void invalidToken_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenTokenIsInvalid() throws Exception {
             mockMvc.perform(get("/api/v1/pet/info")
                             .header("Authorization", "Bearer not.a.real.token"))
                     .andExpect(status().isForbidden());
         }
 
         @Test
-        void eachUserSeesOnlyTheirOwnPet() throws Exception {
+        void shouldReturnOnlyOwnPetWhenMultipleUsersExist() throws Exception {
             String tokenA = registerAndGetToken("usera", "usera@example.com");
             String tokenB = registerAndGetToken("userb", "userb@example.com");
 
@@ -139,7 +141,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class GetStatus {
 
         @Test
-        void returnsOkForExistingPet() throws Exception {
+        void shouldReturnOkWhenPetExists() throws Exception {
             String token = registerAndGetToken("statususer", "status@example.com");
 
             mockMvc.perform(get("/api/v1/pet/status")
@@ -149,7 +151,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenNotAuthenticated() throws Exception {
             mockMvc.perform(get("/api/v1/pet/status"))
                     .andExpect(status().isForbidden());
         }
@@ -163,7 +165,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class Feed {
 
         @Test
-        void increasesHunger() throws Exception {
+        void shouldIncreaseHungerWhenFeeding() throws Exception {
             String token = registerAndGetToken("feeduser", "feed@example.com");
 
             String before = mockMvc.perform(get("/api/v1/pet/info")
@@ -178,7 +180,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void awardsXp() throws Exception {
+        void shouldAwardXpWhenFeeding() throws Exception {
             String token = registerAndGetToken("feedxpuser", "feedxp@example.com");
 
             mockMvc.perform(post("/api/v1/pet/feed")
@@ -188,7 +190,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenNotAuthenticated() throws Exception {
             mockMvc.perform(post("/api/v1/pet/feed"))
                     .andExpect(status().isForbidden());
         }
@@ -202,7 +204,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class Play {
 
         @Test
-        void increasesHappiness() throws Exception {
+        void shouldIncreaseHappinessWhenPlaying() throws Exception {
             String token = registerAndGetToken("playuser", "play@example.com");
 
             String before = mockMvc.perform(get("/api/v1/pet/info")
@@ -217,7 +219,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void decreasesEnergy() throws Exception {
+        void shouldDecreaseEnergyWhenPlaying() throws Exception {
             String token = registerAndGetToken("playenergy", "playenergy@example.com");
 
             mockMvc.perform(post("/api/v1/pet/play")
@@ -227,7 +229,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void awardsXp() throws Exception {
+        void shouldAwardXpWhenPlaying() throws Exception {
             String token = registerAndGetToken("playxpuser", "playxp@example.com");
 
             mockMvc.perform(post("/api/v1/pet/play")
@@ -237,7 +239,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenNotAuthenticated() throws Exception {
             mockMvc.perform(post("/api/v1/pet/play"))
                     .andExpect(status().isForbidden());
         }
@@ -251,7 +253,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class Rest {
 
         @Test
-        void increasesEnergy() throws Exception {
+        void shouldIncreaseEnergyWhenResting() throws Exception {
             String token = registerAndGetToken("restuser", "rest@example.com");
 
             // First drain energy by playing, then rest
@@ -270,7 +272,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void awardsXp() throws Exception {
+        void shouldAwardXpWhenResting() throws Exception {
             String token = registerAndGetToken("restxpuser", "restxp@example.com");
 
             mockMvc.perform(post("/api/v1/pet/rest")
@@ -280,7 +282,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenNotAuthenticated() throws Exception {
             mockMvc.perform(post("/api/v1/pet/rest"))
                     .andExpect(status().isForbidden());
         }
@@ -294,7 +296,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class Clean {
 
         @Test
-        void increasesHygiene() throws Exception {
+        void shouldIncreaseHygieneWhenCleaning() throws Exception {
             String token = registerAndGetToken("cleanuser", "clean@example.com");
 
             String before = mockMvc.perform(get("/api/v1/pet/info")
@@ -309,7 +311,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void awardsXp() throws Exception {
+        void shouldAwardXpWhenCleaning() throws Exception {
             String token = registerAndGetToken("cleanxpuser", "cleanxp@example.com");
 
             mockMvc.perform(post("/api/v1/pet/clean")
@@ -319,7 +321,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenNotAuthenticated() throws Exception {
             mockMvc.perform(post("/api/v1/pet/clean"))
                     .andExpect(status().isForbidden());
         }
@@ -333,7 +335,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class Heal {
 
         @Test
-        void increasesHealth() throws Exception {
+        void shouldIncreaseHealthWhenHealing() throws Exception {
             String token = registerAndGetToken("healuser", "heal@example.com");
 
             String before = mockMvc.perform(get("/api/v1/pet/info")
@@ -348,7 +350,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void awardsXp() throws Exception {
+        void shouldAwardXpWhenHealing() throws Exception {
             String token = registerAndGetToken("healxpuser", "healxp@example.com");
 
             mockMvc.perform(post("/api/v1/pet/heal")
@@ -358,7 +360,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenNotAuthenticated() throws Exception {
             mockMvc.perform(post("/api/v1/pet/heal"))
                     .andExpect(status().isForbidden());
         }
@@ -372,17 +374,17 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class SleepWake {
 
         @Test
-        void sleep_setsAsleepTrue() throws Exception {
+        void shouldSetAsleepTrueWhenSleeping() throws Exception {
             String token = registerAndGetToken("sleepuser", "sleep@example.com");
 
             mockMvc.perform(post("/api/v1/pet/sleep")
                             .header("Authorization", "Bearer " + token))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.asleep").value(true));
+                    .andExpect(jsonPath("$.isAsleep").value(true));
         }
 
         @Test
-        void wake_setsAsleepFalse() throws Exception {
+        void shouldSetAsleepFalseWhenWaking() throws Exception {
             String token = registerAndGetToken("wakeuser", "wake@example.com");
 
             mockMvc.perform(post("/api/v1/pet/sleep")
@@ -391,11 +393,11 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
             mockMvc.perform(post("/api/v1/pet/wake")
                             .header("Authorization", "Bearer " + token))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.asleep").value(false));
+                    .andExpect(jsonPath("$.isAsleep").value(false));
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenNotAuthenticated() throws Exception {
             mockMvc.perform(post("/api/v1/pet/sleep"))
                     .andExpect(status().isForbidden());
         }
@@ -409,7 +411,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class Replace {
 
         @Test
-        void createsNewPetWithDifferentId() throws Exception {
+        void shouldCreateNewPetWithDifferentIdWhenReplacing() throws Exception {
             String token = registerAndGetToken("replaceuser", "replace@example.com");
 
             String before = mockMvc.perform(get("/api/v1/pet/info")
@@ -424,7 +426,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void newPetStartsAtEggLifeStage() throws Exception {
+        void shouldStartAtEggLifeStageWhenReplacing() throws Exception {
             String token = registerAndGetToken("replacenew", "replacenew@example.com");
 
             mockMvc.perform(post("/api/v1/pet/replace")
@@ -436,7 +438,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenNotAuthenticated() throws Exception {
             mockMvc.perform(post("/api/v1/pet/replace"))
                     .andExpect(status().isForbidden());
         }
@@ -450,7 +452,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
     class CrossAction {
 
         @Test
-        void bondLevelIncreasesAcrossInteractions() throws Exception {
+        void shouldIncreaseBondLevelWhenInteractingMultipleTimes() throws Exception {
             String token = registerAndGetToken("bonduser", "bond@example.com");
 
             mockMvc.perform(post("/api/v1/pet/feed")
@@ -466,7 +468,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void xpAccumulatesAcrossActions() throws Exception {
+        void shouldAccumulateXpWhenPerformingMultipleActions() throws Exception {
             String token = registerAndGetToken("xpaccuser", "xpacc@example.com");
 
             mockMvc.perform(post("/api/v1/pet/feed")
@@ -482,7 +484,7 @@ class PetControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void statsAreCappedAt100() throws Exception {
+        void shouldCapStatsAt100WhenExceedingMaximum() throws Exception {
             String token = registerAndGetToken("capuser", "cap@example.com");
 
             // Spam heal many times

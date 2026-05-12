@@ -16,6 +16,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+/**
+ * Stateless JWT token manager backed by JJWT with HMAC signing.
+ *
+ * <p>Tokens are signed with the key derived from {@code jwt.secret} and
+ * carry no roles/authorities — only a subject (username), issued-at, and
+ * expiration. The frontend decodes the payload client-side to check expiry;
+ * the backend validates the signature and expiry on each authenticated
+ * request via {@link JwtAuthenticationFilter}.
+ */
 @Component
 @Slf4j
 public class JwtUtil {

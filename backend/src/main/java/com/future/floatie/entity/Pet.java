@@ -11,6 +11,25 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Virtual pet entity with a 1:1 relationship to {@link User}.
+ *
+ * <h3>Stat system</h3>
+ * Six core stats (hunger, happiness, energy, health, hygiene, weight) are
+ * clamped to 0–100. All decay over time; health decays as a consequence of
+ * other stats dropping too low. When health hits 0 the pet dies.
+ *
+ * <h3>Progression</h3>
+ * XP from interactions drives level-ups. Each level requires
+ * {@code level * xpPerLevel} XP. Level-ups can advance the life stage and
+ * trigger evolution at configured thresholds.
+ *
+ * <h3>Timestamps</h3>
+ * {@code lastInteractionAt} drives the decay calculation — it is updated on
+ * every interaction and on poll (info/status). {@code createdAt} seeds the
+ * age calculation. Both work with the configurable time multiplier so decay
+ * can be accelerated for testing.
+ */
 @Entity
 @Table(name = "pets")
 @Getter

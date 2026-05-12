@@ -12,6 +12,12 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 
+/**
+ * Public sprite generation endpoint. Generates a random 128×128 PNG pixel-art
+ * sprite (not tied to any user or pet). Used for previews before registration
+ * or pet replacement. The response is a raw PNG byte stream with
+ * {@code Content-Type: image/png}.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/pet/sprite")

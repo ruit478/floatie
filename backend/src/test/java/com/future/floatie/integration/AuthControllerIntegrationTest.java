@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -20,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@DirtiesContext
 class AuthControllerIntegrationTest extends IntegrationTestBase {
 
     @Autowired MockMvc mockMvc;
@@ -57,7 +59,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
     class Register {
 
         @Test
-        void happyPath_returnsCreatedWithToken() throws Exception {
+        void shouldReturnCreatedWithTokenWhenRegistrationSucceeds() throws Exception {
             var request = new AuthRequest("newuser", "new@example.com", "Password123!");
 
             mockMvc.perform(post("/auth/register")
@@ -70,7 +72,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void happyPath_petIsCreatedForNewUser() throws Exception {
+        void shouldCreatePetWhenNewUserRegisters() throws Exception {
             // Registration triggers PetService.createPetForUser — a pet row must exist afterwards
             var request = new AuthRequest("petowner", "petowner@example.com", "Password123!");
 
@@ -84,7 +86,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void duplicateUsername_returnsBadRequest() throws Exception {
+        void shouldReturnBadRequestWhenUsernameIsTaken() throws Exception {
             savedUser("taken", "taken@example.com", "Password123!");
 
             var request = new AuthRequest("taken", "other@example.com", "Password123!");
@@ -97,73 +99,73 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void blankUsername_returnsValidationError() throws Exception {
+        void shouldReturnValidationErrorWhenUsernameIsBlank() throws Exception {
             var request = new AuthRequest("", "valid@example.com", "Password123!");
 
             mockMvc.perform(post("/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.username").exists());
+                    .andExpect(jsonPath("$.errors.username").exists());
         }
 
         @Test
-        void usernameTooShort_returnsValidationError() throws Exception {
+        void shouldReturnValidationErrorWhenUsernameIsTooShort() throws Exception {
             var request = new AuthRequest("ab", "valid@example.com", "Password123!");
 
             mockMvc.perform(post("/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.username").exists());
+                    .andExpect(jsonPath("$.errors.username").exists());
         }
 
         @Test
-        void usernameTooLong_returnsValidationError() throws Exception {
+        void shouldReturnValidationErrorWhenUsernameIsTooLong() throws Exception {
             var request = new AuthRequest("a".repeat(51), "valid@example.com", "Password123!");
 
             mockMvc.perform(post("/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.username").exists());
+                    .andExpect(jsonPath("$.errors.username").exists());
         }
 
         @Test
-        void passwordTooShort_returnsValidationError() throws Exception {
+        void shouldReturnValidationErrorWhenPasswordIsTooShort() throws Exception {
             var request = new AuthRequest("validuser", "valid@example.com", "abc");
 
             mockMvc.perform(post("/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.password").exists());
+                    .andExpect(jsonPath("$.errors.password").exists());
         }
 
         @Test
-        void blankPassword_returnsValidationError() throws Exception {
+        void shouldReturnValidationErrorWhenPasswordIsBlank() throws Exception {
             var request = new AuthRequest("validuser", "valid@example.com", "");
 
             mockMvc.perform(post("/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.password").exists());
+                    .andExpect(jsonPath("$.errors.password").exists());
         }
 
         @Test
-        void invalidEmailFormat_returnsValidationError() throws Exception {
+        void shouldReturnValidationErrorWhenEmailIsInvalid() throws Exception {
             var request = new AuthRequest("validuser", "not-an-email", "Password123!");
 
             mockMvc.perform(post("/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.email").exists());
+                    .andExpect(jsonPath("$.errors.email").exists());
         }
 
         @Test
-        void usernameIsTrimmed_leadingAndTrailingSpacesIgnored() throws Exception {
+        void shouldTrimUsernameWhenItHasLeadingAndTrailingSpaces() throws Exception {
             // AuthRequest compact constructor trims username — "  alice  " becomes "alice"
             var request = new AuthRequest("  alice  ", "alice@example.com", "Password123!");
 
@@ -175,7 +177,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void emailIsLowercased_onRegistration() throws Exception {
+        void shouldLowercaseEmailWhenUserRegisters() throws Exception {
             var request = new AuthRequest("caseuser", "UPPER@Example.COM", "Password123!");
 
             mockMvc.perform(post("/auth/register")
@@ -196,7 +198,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
     class Login {
 
         @Test
-        void happyPath_returnsOkWithToken() throws Exception {
+        void shouldReturnOkWithTokenWhenLoginSucceeds() throws Exception {
             savedUser("loginuser", "login@example.com", "Password123!");
 
             var request = new AuthRequest("loginuser", null, "Password123!");
@@ -211,7 +213,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void wrongPassword_returnsUnauthorized() throws Exception {
+        void shouldReturnUnauthorizedWhenPasswordIsWrong() throws Exception {
             savedUser("loginuser", "login@example.com", "Password123!");
 
             var request = new AuthRequest("loginuser", null, "WrongPassword!");
@@ -224,7 +226,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void nonexistentUser_returnsUnauthorized() throws Exception {
+        void shouldReturnUnauthorizedWhenUserDoesNotExist() throws Exception {
             var request = new AuthRequest("nobody", null, "Password123!");
 
             mockMvc.perform(post("/auth/login")
@@ -235,7 +237,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void blankPassword_returnsValidationError() throws Exception {
+        void shouldReturnValidationErrorWhenPasswordIsBlank() throws Exception {
             var request = new AuthRequest("loginuser", null, "");
 
             mockMvc.perform(post("/auth/login")
@@ -245,7 +247,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void tokenIsUsable_authenticatedRequestSucceeds() throws Exception {
+        void shouldAllowAuthenticatedRequestWhenTokenIsValid() throws Exception {
             // Register to get a real token, then use it on a protected endpoint
             var register = new AuthRequest("tokenuser", "token@example.com", "Password123!");
 
@@ -263,7 +265,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void invalidToken_onProtectedEndpoint_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenTokenIsInvalid() throws Exception {
             String fakeToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoYWNrZXIifQ.invalidsignature";
 
             mockMvc.perform(get("/api/v1/pet/info")
@@ -272,7 +274,7 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void noToken_onProtectedEndpoint_returnsForbidden() throws Exception {
+        void shouldReturnForbiddenWhenTokenIsMissing() throws Exception {
             mockMvc.perform(get("/api/v1/pet/info"))
                     .andExpect(status().isForbidden());
         }

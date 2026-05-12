@@ -22,6 +22,34 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
+/**
+ * Core pet lifecycle engine.
+ *
+ * <h3>Stat decay</h3>
+ * Every interaction (and {@code /info} / {@code /status} poll) triggers
+ * {@link #applyDecay(Pet)} which computes real seconds since the last
+ * interaction, converts to <em>game hours</em> via the configurable
+ * {@code app.pet.time-multiplier}, and drains hunger/happiness/energy/hygiene.
+ * Health decays at two tiers: critical ({@code minStat <= 0}) and low
+ * ({@code minStat < 20}). Sleeping pets are immune to decay.
+ *
+ * <h3>Life-stage progression</h3>
+ * Two independent paths: age-based (game days since creation) and level-based
+ * (XP level-ups). Both can advance the life stage; neither can regress it.
+ * Stage thresholds are configurable via {@code app.pet.stage-thresholds} and
+ * {@code app.pet.level-stage-thresholds}.
+ *
+ * <h3>Evolution</h3>
+ * Triggered automatically when the pet's level crosses a configured threshold
+ * ({@code app.pet.evolution-levels}). The path is determined by current stat
+ * quality — see {@link #determineEvolutionPath(Pet)}. Evolution regenerates
+ * the sprite.
+ *
+ * <h3>Sprite persistence</h3>
+ * Sprites are written atomically (tmp file + rename) to the uploads directory.
+ * The PNG filename is {@code {petId}.png}. On pet replacement the old sprite
+ * is deleted from disk.
+ */
 @Service
 @Slf4j
 public class PetService {
@@ -85,6 +113,7 @@ public class PetService {
     private String evolutionLevelsStr;
     private java.util.Set<Integer> evolutionLevels = java.util.Set.of();
 
+    /** Parse comma-separated config strings into int arrays / sets after injection. */
     @jakarta.annotation.PostConstruct
     private void initProperties() {
         String[] parts = stageThresholdsStr.split(",");
@@ -115,6 +144,11 @@ public class PetService {
         this.pixelArtService = pixelArtService;
     }
 
+    /**
+     * Create a pet for a newly registered user. Generates random attributes
+     * (species, color, expression, accessory), persists the entity, and writes
+     * a PNG sprite to disk. Returns empty if sprite I/O fails.
+     */
     @Transactional
     public Optional<Pet> createPetForUser(User user) {
         log.info("Creating pet for user: {}", user.getUsername());
@@ -173,6 +207,7 @@ public class PetService {
         }
     }
 
+    /** Write sprite PNG atomically: render to .tmp then rename over the real file. */
     private void generateAndSaveSprite(Pet pet) throws IOException {
         log.debug("Generating sprite for petId: {}", pet.getId());
 
@@ -379,6 +414,11 @@ public class PetService {
     /**
      * Applies stat decay and age progression based on real time elapsed
      * since the last interaction (or pet creation if never interacted).
+     *
+     * <p>Real seconds are converted to game hours via {@code timeMultiplier}.
+     * Health decays only when other stats drop below thresholds (two-tier).
+     * If health reaches 0 the pet dies immediately. Age progresses based on
+     * total game hours since creation, which may advance the life stage.
      */
     private void applyDecay(Pet pet) {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
@@ -545,18 +585,27 @@ public class PetService {
         }
     }
 
-    /** Replace the current pet for a user with a brand-new one. */
+    /**
+     * Replace the current pet with a brand-new one.
+     *
+     * <p>Because {@code User} has a 1:1 unique constraint on {@code pet},
+     * the old pet must be detached ({@code user.setPet(null)}), deleted, and
+     * <em>flushed</em> before a new pet can be created for the same user.
+     * The old sprite file is deleted from disk after the new pet is saved.
+     */
     @Transactional
     public Optional<Pet> replacePetForUsername(String username) {
         return petRepository.findByUser_Username(username).map(oldPet -> {
             User user = oldPet.getUser();
-            // Create new pet before deleting old one so no 404 window exists
+            UUID oldPetId = oldPet.getId();
+            // Detach old pet from user before creating new one (1:1 unique constraint)
+            user.setPet(null);
+            petRepository.delete(oldPet);
+            petRepository.flush();
+            // Now create new pet
             Optional<Pet> newPetOpt = createPetForUser(user);
             if (newPetOpt.isPresent()) {
-                deleteSpriteForPet(oldPet.getId());
-                user.setPet(null);
-                petRepository.delete(oldPet);
-                petRepository.flush();
+                deleteSpriteForPet(oldPetId);
             }
             return newPetOpt.orElse(null);
         });

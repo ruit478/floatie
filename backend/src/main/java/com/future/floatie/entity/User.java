@@ -9,6 +9,12 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Application user with a 1:1 relationship to {@link Pet}.
+ * The {@code pet} field is the owning side (mapped by {@code Pet.user}),
+ * cascading all operations. Deleting a user deletes the pet automatically;
+ * the caller is responsible for cleaning up the on-disk sprite file.
+ */
 @Entity
 @Table(name = "users")
 @Getter

@@ -13,6 +13,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Global exception handler for the REST API.
+ *
+ * <p>Validation errors (triggered by {@code @Valid} on request bodies)
+ * return 400 with per-field error messages. All other unhandled exceptions
+ * return 500 with a generic message (the real error is logged server-side).
+ */
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {

@@ -15,6 +15,17 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * Extracts the Bearer token from the Authorization header on every request,
+ * validates it, and sets the Spring Security context.
+ *
+ * <h3>Path filtering</h3>
+ * {@link #shouldNotFilter(HttpServletRequest)} skips {@code /auth/register}
+ * and {@code /auth/login} (public endpoints) but <em>not</em>
+ * {@code /auth/account} (DELETE requires authentication).
+ * {@code /api/v1/pet/sprite/generate} and {@code /actuator/health} are
+ * permitted at the {@link SecurityConfig} level, not here.
+ */
 @Component
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -60,6 +71,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         log.debug("JWT authenticated user='{}' for path='{}'", username, request.getRequestURI());
     }
 
+    /**
+     * Skip JWT processing for public auth endpoints. {@code /auth/account}
+     * (DELETE) is explicitly NOT skipped — it requires authentication.
+     * Additional public paths ({@code /actuator/health},
+     * {@code /api/v1/pet/sprite/generate}) are permitted at the
+     * {@link SecurityConfig} level but still pass through this filter
+     * (no token → no context set → request proceeds anonymously).
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();

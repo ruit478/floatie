@@ -11,6 +11,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
+/**
+ * Bridge from Spring Security's {@code UserDetailsService} to the
+ * application's {@code UserRepository}. All users have a single
+ * {@code ROLE_USER} authority — there is no admin tier.
+ */
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 

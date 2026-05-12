@@ -1,13 +1,21 @@
 package com.future.floatie.auth.request;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Dual-purpose auth request used for both login (username + password) and
+ * registration (username + email + password). The compact constructor trims
+ * username and lowercases email. Validation annotations are enforced by
+ * {@code @Valid} on the controller.
+ */
 public record AuthRequest(
         @NotBlank(message = "Username is required")
         @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
         String username,
 
+        @Email(message = "Email must be valid")
         String email,
 
         @NotBlank(message = "Password is required")

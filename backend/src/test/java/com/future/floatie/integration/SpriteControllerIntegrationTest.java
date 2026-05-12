@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -18,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@DirtiesContext
 class SpriteControllerIntegrationTest extends IntegrationTestBase {
 
     @Autowired MockMvc mockMvc;
@@ -52,7 +54,7 @@ class SpriteControllerIntegrationTest extends IntegrationTestBase {
     class GenerateSprite {
 
         @Test
-        void happyPath_returnsPngImage() throws Exception {
+        void shouldReturnPngImageWhenAuthenticated() throws Exception {
             String token = registerAndGetToken("genuser", "gen@example.com");
 
             mockMvc.perform(post("/api/v1/pet/sprite/generate")
@@ -62,9 +64,9 @@ class SpriteControllerIntegrationTest extends IntegrationTestBase {
         }
 
         @Test
-        void unauthenticated_returnsForbidden() throws Exception {
+        void shouldReturnOkWhenNotAuthenticated() throws Exception {
             mockMvc.perform(post("/api/v1/pet/sprite/generate"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isOk());
         }
     }
 }

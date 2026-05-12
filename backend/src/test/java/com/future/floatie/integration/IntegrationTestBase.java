@@ -28,6 +28,7 @@ public abstract class IntegrationTestBase {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.datasource.hikari.max-lifetime", () -> "60000");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         // Sprite files are written to a temp dir during tests
         registry.add("app.uploads.directory", () -> System.getProperty("java.io.tmpdir") + "/floatie-test-sprites");

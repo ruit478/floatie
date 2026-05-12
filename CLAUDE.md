@@ -4,19 +4,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 See `CODE-QUALITY-BUCKET.md` for a prioritized list of remaining issues — check it at the start of each session before writing new code.
 
+## Autonomy
+
+You may operate autonomously — make changes, run builds, and run tests without asking permission. Never run git commands (commit, push, branch, etc.) — the user manages version control. For destructive operations that cause data loss or corruption (e.g., `rm -rf`, dropping database tables, force-pushing), ask first.
+
 ## Project Overview
 
 Floatie is a virtual pet application — users register, log in, and get a procedurally-generated pixel-art pet. The backend is Java 25 / Spring Boot 4.0; the frontend is Angular 21.2 with zoneless change detection and standalone components.
+
+## Environment (WSL2)
+
+This project runs in WSL2. Java and Docker are Windows-native, invoked via their Windows executable paths.
+
+- **JAVA_HOME:** `/mnt/c/Users/ruit4/.jdks/corretto-25.0.3` (Amazon Corretto 25)
+- **Docker:** `/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe`
+- **Docker Compose:** `/mnt/c/Program Files/Docker/Docker/resources/bin/docker-compose.exe`
+- The JDK bin only has `java.exe` / `javac.exe` — symlinks `java -> java.exe` and `javac -> javac.exe` already exist for gradlew compatibility. If you reinstall the JDK, recreate them.
 
 ## Commands
 
 ### Backend (from `backend/`)
 
 ```bash
-./gradlew bootRun                          # Start dev server (port 8080)
-./gradlew test                             # Run all tests (unit + integration)
-./gradlew test --tests "*ClassName"        # Run a single test class
-./gradlew build -x test                    # Build without tests
+# Set JAVA_HOME first, then run gradle via java.exe (gradlew shell script has WSL path issues)
+export JAVA_HOME="/mnt/c/Users/ruit4/.jdks/corretto-25.0.3"
+"$JAVA_HOME/bin/java.exe" -jar gradle/wrapper/gradle-wrapper.jar test          # Run all tests
+"$JAVA_HOME/bin/java.exe" -jar gradle/wrapper/gradle-wrapper.jar test --tests "*ClassName*"  # Single test class
+"$JAVA_HOME/bin/java.exe" -jar gradle/wrapper/gradle-wrapper.jar build -x test # Build without tests
+"$JAVA_HOME/bin/java.exe" -jar gradle/wrapper/gradle-wrapper.jar bootRun       # Start dev server (port 8080)
 ```
 
 The `bootRun` task accepts `-PjvmArgs=<args>` for JVM flags.
@@ -33,7 +48,8 @@ npm run build              # Production build
 ### Docker (from `backend/`)
 
 ```bash
-docker compose up          # Postgres 16 + backend, both with health checks
+"/mnt/c/Program Files/Docker/Docker/resources/bin/docker-compose.exe" up -d    # Postgres 16 + backend
+"/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" ps               # Check running containers
 ```
 
 ## Architecture

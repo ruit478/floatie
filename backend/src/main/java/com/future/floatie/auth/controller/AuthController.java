@@ -21,6 +21,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Stateless JWT authentication controller.
+ *
+ * <h3>Registration flow</h3>
+ * Registration is {@code @Transactional}: user entity, pet entity, and sprite
+ * PNG are created in a single unit. If pet creation throws, the user insert
+ * rolls back. A JWT is returned immediately so the client is authenticated
+ * after registration.
+ *
+ * <h3>Account deletion</h3>
+ * Deletes the user (cascading to pet via FK), then removes the on-disk
+ * sprite file. The sprite deletion is best-effort — failure does not roll
+ * back the DB deletion.
+ */
 @RestController
 @RequestMapping("/auth")
 @Slf4j
